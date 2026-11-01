@@ -125,6 +125,11 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
 .rates input[type=number]{width:90px}
 .rates select{width:72px}
 
+#lines{display:flex;flex-direction:column;gap:10px}
+.line{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.line-h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;color:var(--accent)}
+.line-g{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:10px}
+.line-g .span2{grid-column:1/-1}
 .lbl{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .staff{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;color:var(--fg);font:600 13px var(--f-body);cursor:pointer;text-align:left}
@@ -194,19 +199,20 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
     </div>
     <div class="grid2">
       <div class="panel">
-        <h3>Yeni işlem gir</h3>
+        <h3>Yeni adisyon</h3>
         <form id="recForm" class="form" autocomplete="off">
-          <label>Tarih <input type="date" id="rDate" required></label>
-          <label>Ücret (₺) <input type="number" id="rPrice" min="0" step="0.01" required></label>
-          <label class="full">İşlem <select id="rSvc" required></select></label>
-          <label class="full" id="rCustomWrap" hidden>İşlem adı (elle yaz) <input id="rCustom" placeholder="Örn. Saç bandı takma"></label>
-          <div class="full"><div class="lbl">Yapan kişi(ler) <span class="muted" style="font-weight:500">· birden fazla seçilebilir</span></div><div class="chips" id="rStaff"></div></div>
+          <label class="full">Tarih <input type="date" id="rDate" required></label>
           <div class="full combo">
             <label>Müşteri <input id="rCus" placeholder="Ad, soyad veya telefon yaz…" autocomplete="off"></label>
             <div class="drop" id="cusDrop" hidden></div>
             <div id="rCusInfo"></div>
           </div>
-          <div class="preview full" id="rPreview"><span>Prim</span><b>—</b></div>
+          <div class="full" id="lines"></div>
+          <button type="button" class="btn full" data-act="line-add">+ İşlem ekle</button>
+          <div class="preview full" id="rPreview">
+            <div style="min-width:0">Toplam ücret <b id="tPrice">—</b><div class="muted" id="tBreak" style="font-size:12px"></div></div>
+            <div style="text-align:right">Toplam prim<br><b id="tPrim">—</b></div>
+          </div>
           <button class="btn primary full" type="submit">Kaydet</button>
         </form>
       </div>
@@ -278,7 +284,6 @@ import { SEED_SERVICES, SEED_EMPLOYEES } from "./seed.js?v=2";
 (function(){
 const S={employees:[],services:[],customers:[],records:[]};
 let mode='loading', db=null, unsubRec=null, selCus=null, loadTimer=null, rCusId=null, cusView='info';
-const rStaff=new Set();
 const staffOf=r=>r.staff||(r.employeeId?[{id:r.employeeId,name:r.employeeName,commission:r.commission||0,label:r.ruleLabel||''}]:[]);
 const staffNames=r=>staffOf(r).map(x=>x.name).join(', ');
 const $=s=>document.querySelector(s);
@@ -390,9 +395,8 @@ function render(){
 
   // form selects (preserve selection)
   const keep=(sel,html)=>{const el=$(sel);const v=el.value;el.innerHTML=html;if([...el.options].some(o=>o.value===v))el.value=v};
-  keep('#rSvc','<option value="">Seç…</option>'+svcs.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(''));
-  toggleCustom();renderCusInfo();
-  renderStaff();
+  renderCusInfo();
+  if(!$('#lines').contains(document.activeElement))renderLines();else updTotals();
 
   // records
   const recs=S.records.filter(r=>r.month===month).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
@@ -479,27 +483,6 @@ async function loadHistory(id){
   h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}</td><td>${esc(staffNames(r))}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
 }
 
-function renderStaff(){
-  const s=$('#rSvc').value, p=+$('#rPrice').value||0;
-  const emps=S.employees.filter(e=>e.active!==false).sort(byOrder);
-  [...rStaff].forEach(id=>{if(!emps.some(e=>e.id===id))rStaff.delete(id)});
-  $('#rStaff').innerHTML=emps.length?emps.map(e=>{
-    const r=s&&e.rates&&e.rates[s];
-    let info='&nbsp;';
-    if(s){if(r&&r.on){info=ruleChip(r);if(p>0)info+=' · '+fm(calcPrim(e,s,p).amount)}else info='prim yok'}
-    return `<button type="button" class="staff" data-act="staff-toggle" data-id="${esc(e.id)}" aria-pressed="${rStaff.has(e.id)}">${esc(e.name)}<small>${esc(info).replace('&amp;nbsp;','&nbsp;')}</small></button>`}).join('')
-    :'<span class="muted" style="font-size:13px">Önce Çalışanlar sekmesinden çalışan ekle.</span>';
-  updPreview();
-}
-function updPreview(){
-  const s=$('#rSvc').value, p=+$('#rPrice').value||0, b=$('#rPreview b');
-  const sel=S.employees.filter(e=>rStaff.has(e.id));
-  if(!s||!sel.length){b.textContent='—';$('#rPreview span').textContent='Prim';return}
-  const parts=sel.map(e=>({e,c:calcPrim(e,s,p)})), tot=parts.reduce((a,x)=>a+x.c.amount,0);
-  b.textContent=tot?fm(tot):'Prim yok';
-  $('#rPreview span').textContent=sel.length>1?'Prim · '+parts.map(x=>`${x.e.name.split(' (')[0]} ${fm(x.c.amount)}`).join(' + '):'Prim';
-}
-
 /* ---------- dialog ---------- */
 let dlgSubmit=null;
 function openDlg(title,body,onOk,okText){
@@ -575,7 +558,9 @@ document.addEventListener('click',async ev=>{
     case'cus-open':selCus=id;cusView=b.dataset.view||cusView;showTab('musteri');render();return;
     case'cus-view':cusView=b.dataset.view;render();return;
     case'pick-cus':pickCus(id);return;
-    case'staff-toggle':rStaff.has(id)?rStaff.delete(id):rStaff.add(id);renderStaff();return;
+    case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
+    case'line-add':lines.push(newLine());renderLines();{const el=document.querySelector(`.line[data-k="${lineSeq}"] select`);if(el)el.focus()}return;
+    case'line-del':lines=lines.filter(L=>L.k!==+b.dataset.k);if(!lines.length)lines=[newLine()];renderLines();return;
     case'pick-new':{const p=$('#rCus').value.trim().split(/\s+/);hideDrop();cusDialog(null,{firstName:p.length>1?p.slice(0,-1).join(' '):p[0]||'',lastName:p.length>1?p[p.length-1]:'',stay:true});return}
     case'pick-clear':rCusId=null;$('#rCus').value='';renderCusInfo();return;
     case'rec-del':if(armed(b)){await del('records',id);toast('Kayıt silindi')}return;
@@ -595,10 +580,8 @@ try{const t=sessionStorage.getItem('salon-tab');if(t)showTab(t)}catch(e){}
 
 $('#month').addEventListener('change',e=>{if(!e.target.value)return;month=e.target.value;subRecords();render()});
 $('#cusSearch').addEventListener('input',()=>renderCustomers(S.customers.slice().sort((a,b)=>fullName(a).localeCompare(fullName(b),'tr'))));
-$('#rSvc').addEventListener('change',()=>{const s=S.services.find(x=>x.id===$('#rSvc').value);if(s)$('#rPrice').value=s.price||'';toggleCustom();renderStaff();if(s&&s.custom)$('#rCustom').focus()});
 
 /* ---------- özel işlem + müşteri seçici ---------- */
-function toggleCustom(){const s=S.services.find(x=>x.id===$('#rSvc').value);$('#rCustomWrap').hidden=!(s&&s.custom)}
 function hideDrop(){$('#cusDrop').hidden=true}
 function showDrop(){
   const q=$('#rCus').value.toLocaleLowerCase('tr').trim();
@@ -621,28 +604,98 @@ $('#rCus').addEventListener('input',()=>{if(rCusId){rCusId=null;renderCusInfo()}
 $('#rCus').addEventListener('focus',showDrop);
 $('#rCus').addEventListener('keydown',e=>{if(e.key==='Escape')hideDrop();if(e.key==='ArrowDown'){const f=$('#cusDrop button');if(f){e.preventDefault();f.focus()}}});
 document.addEventListener('click',e=>{if(!e.target.closest('.combo'))hideDrop()});
-$('#rPrice').addEventListener('input',renderStaff);
+/* ---------- adisyon satırları ---------- */
+let lines=[], lineSeq=0;
+const newLine=()=>({k:++lineSeq,svc:'',price:'',custom:'',staff:new Set()});
+const lineByK=k=>lines.find(L=>L.k===+k);
+function resetLines(){lines=[newLine()];renderLines()}
+function chipsHtml(L){
+  const emps=S.employees.filter(e=>e.active!==false).sort(byOrder);
+  if(!emps.length)return '<span class="muted" style="font-size:13px">Önce Çalışanlar sekmesinden çalışan ekle.</span>';
+  const p=+L.price||0;
+  return emps.map(e=>{
+    const r=L.svc&&e.rates&&e.rates[L.svc];
+    let info='';
+    if(L.svc){if(r&&r.on){info=ruleChip(r);if(p>0)info+=' · '+fm(calcPrim(e,L.svc,p).amount)}else info='prim yok'}
+    return `<button type="button" class="staff" data-act="staff-toggle" data-k="${L.k}" data-id="${esc(e.id)}" aria-pressed="${L.staff.has(e.id)}">${esc(e.name)}<small>${info?esc(info):'&nbsp;'}</small></button>`}).join('');
+}
+function renderLines(){
+  const svcs=S.services.slice().sort(byOrder);
+  const ids=new Set(S.employees.map(e=>e.id));
+  lines.forEach(L=>[...L.staff].forEach(id=>{if(!ids.has(id))L.staff.delete(id)}));
+  $('#lines').innerHTML=lines.map((L,i)=>{
+    const s=S.services.find(x=>x.id===L.svc);
+    return `<div class="line" data-k="${L.k}">
+      <div class="line-h"><span>${i+1}. işlem</span>${lines.length>1?`<button type="button" class="btn ghost sm danger" data-act="line-del" data-k="${L.k}">Kaldır</button>`:''}</div>
+      <div class="line-g">
+        <label>İşlem <select data-f="svc" data-k="${L.k}"><option value="">Seç…</option>${svcs.map(o=>`<option value="${esc(o.id)}"${o.id===L.svc?' selected':''}>${esc(o.name)}</option>`).join('')}</select></label>
+        <label>Ücret (₺) <input type="number" min="0" step="0.01" inputmode="decimal" data-f="price" data-k="${L.k}" value="${esc(L.price)}" placeholder="0"></label>
+        ${s&&s.custom?`<label class="span2">İşlem adı (elle yaz) <input data-f="custom" data-k="${L.k}" value="${esc(L.custom)}" placeholder="Örn. Saç bandı takma"></label>`:''}
+      </div>
+      <div><div class="lbl">Yapan kişi(ler) <span class="muted" style="font-weight:500">· usta ve çırak birlikte seçilebilir</span></div>
+      <div class="chips" id="chips-${L.k}">${chipsHtml(L)}</div></div>
+    </div>`}).join('');
+  updTotals();
+}
+function updTotals(){
+  let price=0;const per={};
+  lines.forEach(L=>{
+    const p=+L.price||0;price+=p;
+    if(!L.svc)return;
+    S.employees.filter(e=>L.staff.has(e.id)).forEach(e=>{const a=calcPrim(e,L.svc,p).amount;per[e.id]=per[e.id]||{name:e.name,amt:0,o:e.order??999};per[e.id].amt+=a});
+  });
+  const rows=Object.values(per).sort((a,b)=>a.o-b.o), prim=rows.reduce((s,x)=>s+x.amt,0);
+  $('#tPrice').textContent=fm(price);
+  $('#tPrim').textContent=fm(prim);
+  $('#tBreak').textContent=rows.length?rows.map(x=>`${x.name.split(' (')[0]} ${fm(x.amt)}`).join(' · '):'';
+}
+$('#lines').addEventListener('change',e=>{
+  const t=e.target;if(t.dataset.f!=='svc')return;
+  const L=lineByK(t.dataset.k);if(!L)return;
+  L.svc=t.value;const s=S.services.find(x=>x.id===L.svc);
+  if(s&&s.price)L.price=String(s.price);
+  renderLines();
+  if(s&&s.custom){const c=document.querySelector(`[data-f="custom"][data-k="${L.k}"]`);if(c)c.focus()}
+});
+$('#lines').addEventListener('input',e=>{
+  const t=e.target, L=t.dataset.k&&lineByK(t.dataset.k);if(!L)return;
+  if(t.dataset.f==='price'){L.price=t.value;$('#chips-'+L.k).innerHTML=chipsHtml(L);updTotals()}
+  if(t.dataset.f==='custom')L.custom=t.value;
+});
 
 $('#recForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
-  const s=S.services.find(x=>x.id===$('#rSvc').value);
-  const sel=S.employees.filter(x=>rStaff.has(x.id)).sort(byOrder);
-  if(!s){toast('İşlem seç');return}
-  if(!sel.length){toast('İşlemi yapan kişiyi seç');return}
-  const date=$('#rDate').value||today, price=Number($('#rPrice').value)||0;
+  const date=$('#rDate').value||today;
   const cTxt=$('#rCus').value.trim(), c=rCusId&&S.customers.find(x=>x.id===rCusId);
-  let sName=s.name;
-  if(s.custom){sName=$('#rCustom').value.trim();if(!sName){toast('Elle işlem adını yaz');$('#rCustom').focus();return}}
-  const staff=sel.map(e=>{const pr=calcPrim(e,s.id,price);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
-  const total=staff.reduce((a,x)=>a+x.commission,0);
-  const rec={id:uid(),date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:sName,
-    customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(total*100)/100,createdAt:new Date().toISOString()};
-  try{await put('records',rec)}catch(err){return}
-  $('#rCustom').value='';rStaff.clear();renderStaff();
-  if(rec.month!==month){month=rec.month;$('#month').value=month;subRecords()}
-  toast(`Kaydedildi · prim ${fm(total)}`);
+  const focusLine=(L,msg)=>{toast(msg);const el=document.querySelector(`.line[data-k="${L.k}"]`);if(el)el.scrollIntoView({block:'center'})};
+  const use=lines.filter(L=>L.svc||L.staff.size||L.price);
+  if(!use.length){toast('En az bir işlem gir');return}
+  for(const [i,L] of use.entries()){
+    const s=S.services.find(x=>x.id===L.svc);
+    if(!s)return focusLine(L,`${i+1}. işlem: işlem seç`);
+    if(s.custom&&!L.custom.trim())return focusLine(L,`${i+1}. işlem: işlem adını yaz`);
+    if(!L.staff.size)return focusLine(L,`${i+1}. işlem: yapan kişiyi seç`);
+  }
+  const visitId=uid(), now=new Date().toISOString();
+  const recs=use.map((L,i)=>{
+    const s=S.services.find(x=>x.id===L.svc), price=Number(L.price)||0;
+    const staff=S.employees.filter(e=>L.staff.has(e.id)).sort(byOrder).map(e=>{const pr=calcPrim(e,s.id,price);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
+    const tot=staff.reduce((a,x)=>a+x.commission,0);
+    return{id:uid()+i,visitId,line:i+1,date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:s.custom?L.custom.trim():s.name,
+      customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,createdAt:now};
+  });
+  try{
+    const b=writeBatch(fs);
+    recs.forEach(r=>{const {id,...d}=r;b.set(doc(fs,'records',id),d)});
+    await b.commit();
+  }catch(e){toast(e&&e.code==='permission-denied'?'Bu hesabın kayıt yetkisi yok':'Kaydedilemedi, bağlantını kontrol et');return}
+  const prim=recs.reduce((a,r)=>a+r.commission,0);
+  resetLines();rCusId=null;$('#rCus').value='';renderCusInfo();
+  if(recs[0].month!==month){month=recs[0].month;$('#month').value=month;subRecords()}
+  toast(`${recs.length} işlem kaydedildi · toplam prim ${fm(prim)}`);
 });
 
+resetLines();
 init();
 })();
 </script>
