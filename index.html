@@ -82,6 +82,18 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .btn.sm{font-size:13px;padding:6px 10px}
 
 .preview{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);font:600 13px var(--f-body);padding:7px 12px;border-radius:99px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile span{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tile b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:clamp(17px,2.4vw,22px);overflow-wrap:anywhere}
+.tile b.acc{color:var(--accent)}
+.tile small{font-size:12px;color:var(--muted)}
+.bar{height:4px;background:var(--surface-2);border-radius:2px;margin-top:5px;min-width:80px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
 .preview b{font-family:var(--f-mono);font-size:16px;color:var(--accent)}
 
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
@@ -181,6 +193,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="kayit" aria-selected="true">İşlem Kayıtları</button>
+      <button class="tab" role="tab" data-tab="rapor" aria-selected="false">Raporlar</button>
       <button class="tab" role="tab" data-tab="calisan" aria-selected="false">Çalışanlar<span class="n" id="nEmp"></span></button>
       <button class="tab" role="tab" data-tab="islem" aria-selected="false">İşlemler<span class="n" id="nSvc"></span></button>
       <button class="tab" role="tab" data-tab="musteri" aria-selected="false">Müşteriler<span class="n" id="nCus"></span></button>
@@ -205,6 +218,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
           <div class="full combo">
             <label>Müşteri <input id="rCus" placeholder="Ad, soyad veya telefon yaz…" autocomplete="off"></label>
             <div class="drop" id="cusDrop" hidden></div>
+            <label id="rPhoneWrap" hidden style="margin-top:8px">Telefon <span class="muted" style="font-weight:500">· yeni müşteri, isteğe bağlı</span><input id="rPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
             <div id="rCusInfo"></div>
           </div>
           <div class="full" id="lines"></div>
@@ -233,6 +247,28 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
         <tbody id="recBody"></tbody>
       </table></div>
     </div>
+  </section>
+
+  <!-- RAPORLAR -->
+  <section id="tab-rapor" hidden>
+    <div class="sechead"><div><h2>Ciro ve prim raporu</h2><div class="muted" style="font-size:13px">Tarih aralığı seç; ciro ve her çalışanın prim hakedişi hesaplanır.</div></div></div>
+    <div class="panel" style="margin-bottom:18px">
+      <div class="seg">
+        <button type="button" data-act="rp-preset" data-p="today" aria-pressed="false">Bugün</button>
+        <button type="button" data-act="rp-preset" data-p="yesterday" aria-pressed="false">Dün</button>
+        <button type="button" data-act="rp-preset" data-p="week" aria-pressed="false">Bu hafta</button>
+        <button type="button" data-act="rp-preset" data-p="lastweek" aria-pressed="false">Geçen hafta</button>
+        <button type="button" data-act="rp-preset" data-p="month" aria-pressed="true">Bu ay</button>
+        <button type="button" data-act="rp-preset" data-p="lastmonth" aria-pressed="false">Geçen ay</button>
+        <button type="button" data-act="rp-preset" data-p="year" aria-pressed="false">Bu yıl</button>
+      </div>
+      <div class="row-flex" style="margin-top:12px">
+        <label>Başlangıç <input type="date" id="rpFrom"></label>
+        <label>Bitiş <input type="date" id="rpTo"></label>
+        <label>Göster <select id="rpGroup"><option value="day">Gün gün</option><option value="week" selected>Hafta hafta</option><option value="month">Ay ay</option></select></label>
+      </div>
+    </div>
+    <div id="rpOut"><div class="panel empty">Rapor yükleniyor…</div></div>
   </section>
 
   <!-- ÇALIŞANLAR -->
@@ -347,6 +383,7 @@ function startData(){
   });
   subRecords();
   seedIfEmpty();
+  if(!$('#tab-rapor').hidden)rpPreset_(rpPreset);
 }
 function stopData(){
   unsubs.forEach(u=>u());unsubs=[];
@@ -559,6 +596,7 @@ document.addEventListener('click',async ev=>{
     case'cus-view':cusView=b.dataset.view;render();return;
     case'pick-cus':pickCus(id);return;
     case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
+    case'rp-preset':rpPreset_(b.dataset.p);return;
     case'line-add':lines.push(newLine());renderLines();{const el=document.querySelector(`.line[data-k="${lineSeq}"] select`);if(el)el.focus()}return;
     case'line-del':lines=lines.filter(L=>L.k!==+b.dataset.k);if(!lines.length)lines=[newLine()];renderLines();return;
     case'pick-new':{const p=$('#rCus').value.trim().split(/\s+/);hideDrop();cusDialog(null,{firstName:p.length>1?p.slice(0,-1).join(' '):p[0]||'',lastName:p.length>1?p[p.length-1]:'',stay:true});return}
@@ -574,6 +612,7 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===t));
   document.querySelectorAll('main > section').forEach(s=>s.hidden=s.id!=='tab-'+t);
   try{sessionStorage.setItem('salon-tab',t)}catch(e){}
+  if(t==='rapor'&&mode==='db')rpPreset_(rpPreset==='custom'?'month':rpPreset);
 }
 document.querySelectorAll('.tab').forEach(x=>x.onclick=()=>showTab(x.dataset.tab));
 try{const t=sessionStorage.getItem('salon-tab');if(t)showTab(t)}catch(e){}
@@ -594,13 +633,14 @@ function showDrop(){
 }
 function pickCus(id){const c=S.customers.find(x=>x.id===id);if(!c)return;rCusId=id;$('#rCus').value=fullName(c);hideDrop();renderCusInfo()}
 function renderCusInfo(){
+  $('#rPhoneWrap').hidden=!!rCusId||!$('#rCus').value.trim();
   const box=$('#rCusInfo');const c=rCusId&&S.customers.find(x=>x.id===rCusId);
   if(!c){box.innerHTML='';return}
   box.innerHTML=`<div class="cusinfo"><div style="min-width:0"><strong>${esc(fullName(c))}</strong> <span class="muted">${esc(c.phone||'')}</span>
     ${c.colorCode?`<div class="swatch" style="margin-top:2px">Boya: ${esc(c.colorCode.replace(/\n/g,' · '))}</div>`:''}</div>
     <div style="display:flex;gap:6px"><button type="button" class="btn sm" data-act="cus-open" data-view="gecmis" data-id="${esc(c.id)}">Geçmiş işlemler</button><button type="button" class="btn ghost sm" data-act="pick-clear">Değiştir</button></div></div>`;
 }
-$('#rCus').addEventListener('input',()=>{if(rCusId){rCusId=null;renderCusInfo()}showDrop()});
+$('#rCus').addEventListener('input',()=>{if(rCusId)rCusId=null;renderCusInfo();showDrop()});
 $('#rCus').addEventListener('focus',showDrop);
 $('#rCus').addEventListener('keydown',e=>{if(e.key==='Escape')hideDrop();if(e.key==='ArrowDown'){const f=$('#cusDrop button');if(f){e.preventDefault();f.focus()}}});
 document.addEventListener('click',e=>{if(!e.target.closest('.combo'))hideDrop()});
@@ -663,10 +703,91 @@ $('#lines').addEventListener('input',e=>{
   if(t.dataset.f==='custom')L.custom=t.value;
 });
 
+/* ---------- raporlar ---------- */
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const mondayOf=s=>{const d=parseD(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d)};
+const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return iso(d)};
+const dayName=s=>parseD(s).toLocaleDateString('tr-TR',{weekday:'short'});
+let rpPreset='month', rpLoaded=false, rpSeq=0;
+function rpRange(p){
+  const t=parseD(today);
+  if(p==='today')return[today,today];
+  if(p==='yesterday'){const y=addDays(today,-1);return[y,y]}
+  if(p==='week'){const m=mondayOf(today);return[m,addDays(m,6)]}
+  if(p==='lastweek'){const m=addDays(mondayOf(today),-7);return[m,addDays(m,6)]}
+  if(p==='month')return[iso(new Date(t.getFullYear(),t.getMonth(),1)),iso(new Date(t.getFullYear(),t.getMonth()+1,0))];
+  if(p==='lastmonth')return[iso(new Date(t.getFullYear(),t.getMonth()-1,1)),iso(new Date(t.getFullYear(),t.getMonth(),0))];
+  if(p==='year')return[`${t.getFullYear()}-01-01`,`${t.getFullYear()}-12-31`];
+  return[$('#rpFrom').value,$('#rpTo').value];
+}
+function rpPreset_(p){
+  rpPreset=p;
+  document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===p));
+  const[f,t]=rpRange(p);$('#rpFrom').value=f;$('#rpTo').value=t;
+  if(p==='today'||p==='yesterday')$('#rpGroup').value='day';
+  else if(p==='year')$('#rpGroup').value='month';
+  else if(p==='month'||p==='lastmonth')$('#rpGroup').value=$('#rpGroup').value==='month'?'week':$('#rpGroup').value;
+  runReport();
+}
+async function runReport(){
+  const from=$('#rpFrom').value, to=$('#rpTo').value, out=$('#rpOut');
+  if(!from||!to){out.innerHTML='<div class="panel empty">Başlangıç ve bitiş tarihini seç.</div>';return}
+  if(from>to){out.innerHTML='<div class="panel empty">Başlangıç tarihi bitişten sonra olamaz.</div>';return}
+  if(mode!=='db')return;
+  const seq=++rpSeq;rpLoaded=true;
+  out.innerHTML='<div class="panel empty">Hesaplanıyor…</div>';
+  let recs;
+  try{recs=snapList(await getDocs(query(collection(fs,'records'),where('date','>=',from),where('date','<=',to))))}
+  catch(e){if(seq===rpSeq)out.innerHTML='<div class="panel empty"><strong>Rapor alınamadı</strong>Bağlantını kontrol edip tekrar dene.</div>';return}
+  if(seq!==rpSeq)return;
+  const g=$('#rpGroup').value;
+  const keyOf=d=>g==='day'?d:g==='week'?mondayOf(d):d.slice(0,7);
+  const labelOf=k=>g==='day'?`${trDate(k)} <span class="muted">${dayName(k)}</span>`:g==='week'?`${trDate(k)} – ${trDate(addDays(k,6))}`:esc(monthName(k));
+  const per={}, emp={};let ciro=0,prim=0;const visits=new Set();
+  recs.forEach(r=>{
+    const k=keyOf(r.date), p=+r.price||0, c=+r.commission||0;
+    const a=per[k]||(per[k]={n:0,ciro:0,prim:0,v:new Set()});a.n++;a.ciro+=p;a.prim+=c;a.v.add(r.visitId||r.id);
+    ciro+=p;prim+=c;visits.add(r.visitId||r.id);
+    staffOf(r).forEach(x=>{const e=emp[x.id]||(emp[x.id]={name:x.name,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.id)||{}).order??999});e.n++;e.ciro+=p;e.prim+=+x.commission||0});
+  });
+  const range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
+  if(!recs.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında kayıt yok</strong>Başka bir tarih aralığı seç.</div>`;return}
+  const keys=Object.keys(per).sort(), max=Math.max(...keys.map(k=>per[k].ciro),1);
+  const emps=Object.values(emp).sort((a,b)=>a.o-b.o);
+  out.innerHTML=`
+  <div class="tiles">
+    <div class="tile"><span>Ciro</span><b>${fm(ciro)}</b><small>${range}</small></div>
+    <div class="tile"><span>Toplam prim hakedişi</span><b class="acc">${fm(prim)}</b><small>${ciro?('%'+(prim/ciro*100).toFixed(1).replace('.',',')+' cirodan'):''}</small></div>
+    <div class="tile"><span>Primler sonrası kalan</span><b>${fm(ciro-prim)}</b><small>ciro − prim</small></div>
+    <div class="tile"><span>İşlem / müşteri gelişi</span><b>${recs.length} / ${visits.size}</b><small>adisyon başı ort. ${fm(ciro/visits.size)}</small></div>
+  </div>
+  <div class="grid2" style="margin-top:18px">
+    <div><h3>Çalışan bazında hakediş</h3><div class="tablewrap"><table class="summary">
+      <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Katıldığı ciro</th><th class="num">Prim</th></tr></thead>
+      <tbody>${emps.map(e=>`<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num">${fm(e.ciro)}</td><td class="num prim">${fm(e.prim)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num">${fm(ciro)}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td></tr></tfoot>
+    </table></div><div class="muted" style="font-size:12px;margin-top:6px">Bir işleme iki kişi katıldıysa o işlemin ücreti ikisinin satırında da görünür. Toplam ciro tek sayılır.</div></div>
+    <div><h3>${g==='day'?'Gün gün':g==='week'?'Hafta hafta':'Ay ay'}</h3><div class="tablewrap"><table>
+      <thead><tr><th>${g==='day'?'Gün':g==='week'?'Hafta':'Ay'}</th><th class="num">Geliş</th><th class="num">Ciro</th><th class="num">Prim</th></tr></thead>
+      <tbody>${keys.map(k=>{const a=per[k];return`<tr><td style="white-space:nowrap">${labelOf(k)}<div class="bar"><i style="width:${(a.ciro/max*100).toFixed(1)}%"></i></div></td><td class="num">${a.v.size}</td><td class="num">${fm(a.ciro)}</td><td class="num" style="color:var(--accent)">${fm(a.prim)}</td></tr>`}).join('')}</tbody>
+    </table></div></div>
+  </div>`;
+}
+$('#rpFrom').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
+$('#rpTo').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
+$('#rpGroup').addEventListener('change',runReport);
+
 $('#recForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const date=$('#rDate').value||today;
-  const cTxt=$('#rCus').value.trim(), c=rCusId&&S.customers.find(x=>x.id===rCusId);
+  const cTxt=$('#rCus').value.trim().replace(/\s+/g,' ');
+  let c=rCusId&&S.customers.find(x=>x.id===rCusId), newCus=null;
+  if(!c&&cTxt){
+    const low=cTxt.toLocaleLowerCase('tr'), same=S.customers.filter(x=>fullName(x).toLocaleLowerCase('tr')===low);
+    if(same.length===1)c=same[0];
+    else{const parts=cTxt.split(' ');newCus={id:uid(),firstName:parts.length>1?parts.slice(0,-1).join(' '):parts[0],lastName:parts.length>1?parts[parts.length-1]:'',phone:$('#rPhone').value.trim(),notes:[],colorCode:'',createdAt:new Date().toISOString()};c=newCus}
+  }
   const focusLine=(L,msg)=>{toast(msg);const el=document.querySelector(`.line[data-k="${L.k}"]`);if(el)el.scrollIntoView({block:'center'})};
   const use=lines.filter(L=>L.svc||L.staff.size||L.price);
   if(!use.length){toast('En az bir işlem gir');return}
@@ -687,12 +808,13 @@ $('#recForm').addEventListener('submit',async ev=>{
   try{
     const b=writeBatch(fs);
     recs.forEach(r=>{const {id,...d}=r;b.set(doc(fs,'records',id),d)});
+    if(newCus){const {id,...d}=newCus;b.set(doc(fs,'customers',id),d)}
     await b.commit();
   }catch(e){toast(e&&e.code==='permission-denied'?'Bu hesabın kayıt yetkisi yok':'Kaydedilemedi, bağlantını kontrol et');return}
   const prim=recs.reduce((a,r)=>a+r.commission,0);
-  resetLines();rCusId=null;$('#rCus').value='';renderCusInfo();
+  resetLines();rCusId=null;$('#rCus').value='';$('#rPhone').value='';renderCusInfo();
   if(recs[0].month!==month){month=recs[0].month;$('#month').value=month;subRecords()}
-  toast(`${recs.length} işlem kaydedildi · toplam prim ${fm(prim)}`);
+  toast(`${recs.length} işlem kaydedildi${newCus?' · yeni müşteri eklendi':''} · prim ${fm(prim)}`);
 });
 
 resetLines();
