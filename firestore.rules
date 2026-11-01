@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Sadece aşağıdaki listedeki e-postalarla giriş yapan kişiler okuyup yazabilir.
+    function yonetici() {
+      return request.auth != null
+        && request.auth.token.email in ['YONETICI_EPOSTA@gmail.com'];
+    }
+    match /{document=**} {
+      allow read, write: if yonetici();
+    }
+  }
+}

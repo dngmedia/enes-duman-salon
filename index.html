@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Salon Prim Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Layout: sticky header with tab rail; each tab is a working surface (form + table / list + detail). Dark-first. */
+:root{
+  --bg:#141016; --surface:#1d1720; --surface-2:#271f2b; --line:#382d3c;
+  --fg:#f2eaee; --muted:#a8989f; --accent:#d9a07f; --accent-ink:#22150f;
+  --accent-soft:rgba(217,160,127,.14); --danger:#e48383; --ok:#8fcaa5;
+  --f-display:"Bodoni Moda",Georgia,"Times New Roman",serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f6f1f3; --surface:#ffffff; --surface-2:#f1e9ed; --line:#e0d3d9;
+  --fg:#231a20; --muted:#74646c; --accent:#a8603c; --accent-ink:#ffffff;
+  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f6f1f3; --surface:#ffffff; --surface-2:#f1e9ed; --line:#e0d3d9;
+  --fg:#231a20; --muted:#74646c; --accent:#a8603c; --accent-ink:#ffffff;
+  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:16px 10px}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.brand h1 em{font-style:italic;font-weight:500;color:var(--accent)}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--danger)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:0}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab .n{font:500 11px var(--f-mono);color:var(--muted);margin-left:4px}
+main{padding-block:22px 60px}
+section[hidden]{display:none!important}
+
+h2{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0}
+h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+.sechead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--muted);min-width:0}
+input,select,textarea{font:500 15px var(--f-body);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:70px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.form .full{grid-column:1/-1}
+@media (max-width:480px){.form{grid-template-columns:minmax(0,1fr)}}
+
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font:600 14px var(--f-body);padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted);padding:6px 8px}
+.btn.ghost:hover{color:var(--fg);border-color:var(--line)}
+.btn.danger{color:var(--danger)}
+.btn.armed{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.sm{font-size:13px;padding:6px 10px}
+
+.preview{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.preview b{font-family:var(--f-mono);font-size:16px;color:var(--accent)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tfoot td{font-weight:700;border-top:1px solid var(--line);border-bottom:0}
+th.num{text-align:right}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+
+.summary td.prim{color:var(--accent);font-family:var(--f-mono);font-weight:700}
+.empty{padding:28px 18px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--fg);font-size:15px;margin-bottom:4px}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.card .who{font-weight:700;font-size:16px}
+.card .rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.card .acts{display:flex;gap:6px}
+
+.custlist .row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;color:var(--fg);font:inherit}
+.custlist .row:last-child{border-bottom:0}
+.custlist .row:hover,.custlist .row[aria-current="true"]{background:var(--accent-soft)}
+.swatch{font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.detail .colorbox{background:var(--surface-2);border:1px dashed var(--accent);border-radius:8px;padding:12px;margin-top:6px}
+.colorbox .code{font-family:var(--f-mono);font-size:18px;color:var(--accent);word-break:break-word}
+.note{border-left:2px solid var(--line);padding:4px 0 4px 12px}
+.note time{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row-flex{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.row-flex > label{flex:1 1 180px}
+
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 40px)}
+dialog::backdrop{background:rgba(10,6,10,.6)}
+.dlg-h{padding:18px 20px 0;font-family:var(--f-display);font-size:21px;font-weight:700}
+.dlg-b{padding:16px 20px;overflow:auto}
+.dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
+.rates td{padding:8px 6px}
+.rates input[type=number]{width:90px}
+.rates select{width:72px}
+
+.lbl{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.staff{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;color:var(--fg);font:600 13px var(--f-body);cursor:pointer;text-align:left}
+.staff small{font:500 11px var(--f-mono);color:var(--muted)}
+.staff[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.staff[aria-pressed="true"] small{color:var(--accent-ink);opacity:.8}
+.staff:hover{border-color:var(--accent)}
+.combo{position:relative}
+.drop{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:8;background:var(--surface);border:1px solid var(--line);border-radius:8px;max-height:280px;overflow:auto;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.drop button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);font:500 14px var(--f-body);padding:10px 12px;cursor:pointer}
+.drop button:last-child{border-bottom:0}
+.drop button:hover,.drop button:focus{background:var(--accent-soft);outline:none}
+.drop .add{color:var(--accent);font-weight:700}
+.cusinfo{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface-2)}
+.cusinfo strong{font-size:14px}
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.subtabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:600 14px var(--f-body);padding:8px 12px;cursor:pointer}
+.subtabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;z-index:50;max-width:calc(100vw - 32px)}
+.banner{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+@media (prefers-reduced-motion:no-preference){.btn,.tab{transition:color .15s,border-color .15s,background .15s}}
+</style>
+<style>
+.login{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.login form{width:min(380px,100%);display:flex;flex-direction:column;gap:14px}
+.login h1{font-family:var(--f-display);font-size:30px;margin:0}
+.login h1 em{font-style:italic;font-weight:500;color:var(--accent)}
+.login .err{color:var(--danger);font-size:13px;min-height:18px}
+.boot{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="boot" id="boot">Yükleniyor…</div>
+<div class="login" id="login" hidden>
+  <form id="loginForm">
+    <div><h1>Enes Duman <em>Hair</em></h1><div class="muted">Yönetici girişi</div></div>
+    <label>E-posta <input type="email" id="lEmail" autocomplete="username" required></label>
+    <label>Şifre <input type="password" id="lPass" autocomplete="current-password" required></label>
+    <div class="err" id="lErr"></div>
+    <button class="btn primary" type="submit">Giriş yap</button>
+  </form>
+</div>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Enes Duman <em>Hair</em></h1>
+      <div style="display:flex;align-items:center;gap:12px"><div class="status"><span class="dot" id="dot"></span><span id="statusText">Yükleniyor…</span></div><button class="btn ghost sm" id="logout" type="button">Çıkış</button></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="kayit" aria-selected="true">İşlem Kayıtları</button>
+      <button class="tab" role="tab" data-tab="calisan" aria-selected="false">Çalışanlar<span class="n" id="nEmp"></span></button>
+      <button class="tab" role="tab" data-tab="islem" aria-selected="false">İşlemler<span class="n" id="nSvc"></span></button>
+      <button class="tab" role="tab" data-tab="musteri" aria-selected="false">Müşteriler<span class="n" id="nCus"></span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <!-- KAYITLAR -->
+  <section id="tab-kayit">
+    <div class="sechead">
+      <h2>İşlem kayıtları</h2>
+      <label style="flex-direction:row;align-items:center;gap:8px">Ay <input type="month" id="month" style="width:auto"></label>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Yeni işlem gir</h3>
+        <form id="recForm" class="form" autocomplete="off">
+          <label>Tarih <input type="date" id="rDate" required></label>
+          <label>Ücret (₺) <input type="number" id="rPrice" min="0" step="0.01" required></label>
+          <label class="full">İşlem <select id="rSvc" required></select></label>
+          <label class="full" id="rCustomWrap" hidden>İşlem adı (elle yaz) <input id="rCustom" placeholder="Örn. Saç bandı takma"></label>
+          <div class="full"><div class="lbl">Yapan kişi(ler) <span class="muted" style="font-weight:500">· birden fazla seçilebilir</span></div><div class="chips" id="rStaff"></div></div>
+          <div class="full combo">
+            <label>Müşteri <input id="rCus" placeholder="Ad, soyad veya telefon yaz…" autocomplete="off"></label>
+            <div class="drop" id="cusDrop" hidden></div>
+            <div id="rCusInfo"></div>
+          </div>
+          <div class="preview full" id="rPreview"><span>Prim</span><b>—</b></div>
+          <button class="btn primary full" type="submit">Kaydet</button>
+        </form>
+      </div>
+      <div class="stack">
+        <div>
+          <h3 id="sumTitle">Bu ayın prim özeti</h3>
+          <div class="tablewrap"><table class="summary">
+            <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Ciro</th><th class="num">Prim</th></tr></thead>
+            <tbody id="sumBody"></tbody><tfoot id="sumFoot"></tfoot>
+          </table></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:22px">
+      <h3>Ayın kayıtları</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Tarih</th><th>Çalışan</th><th>İşlem</th><th>Müşteri</th><th class="num">Ücret</th><th class="num">Prim</th><th></th></tr></thead>
+        <tbody id="recBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ÇALIŞANLAR -->
+  <section id="tab-calisan" hidden>
+    <div class="sechead">
+      <div><h2>Çalışanlar</h2><div class="muted" style="font-size:13px">Her çalışanın hangi işlemden ne kadar prim aldığını buradan belirle.</div></div>
+      <button class="btn primary" data-act="emp-new">+ Çalışan ekle</button>
+    </div>
+    <div class="list" id="empList"></div>
+  </section>
+
+  <!-- İŞLEMLER -->
+  <section id="tab-islem" hidden>
+    <div class="sechead">
+      <div><h2>İşlemler</h2><div class="muted" style="font-size:13px">Salonda yapılan hizmetler ve varsayılan ücretleri.</div></div>
+      <button class="btn primary" data-act="svc-new">+ İşlem ekle</button>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>İşlem</th><th class="num">Varsayılan ücret</th><th>Prim alan çalışanlar</th><th></th></tr></thead>
+      <tbody id="svcBody"></tbody>
+    </table></div>
+  </section>
+
+  <!-- MÜŞTERİLER -->
+  <section id="tab-musteri" hidden>
+    <div class="sechead">
+      <h2>Müşteriler</h2>
+      <button class="btn primary" data-act="cus-new">+ Müşteri ekle</button>
+    </div>
+    <div class="grid2">
+      <div class="stack">
+        <input id="cusSearch" placeholder="İsim veya telefon ara…">
+        <div class="tablewrap custlist" id="cusList2"></div>
+      </div>
+      <div class="panel detail" id="cusDetail"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dlg-h" id="dlgTitle"></div><div class="dlg-b" id="dlgBody"></div><div class="dlg-f"><button class="btn" value="cancel" type="button" id="dlgCancel">Vazgeç</button><button class="btn primary" type="submit" id="dlgOk">Kaydet</button></div></form></dialog>
+<div id="toast" hidden></div>
+
+<script type="module">
+import { firebaseConfig } from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { SEED_SERVICES, SEED_EMPLOYEES } from "./seed.js";
+(function(){
+const S={employees:[],services:[],customers:[],records:[]};
+let mode='loading', db=null, unsubRec=null, selCus=null, loadTimer=null, rCusId=null, cusView='info';
+const rStaff=new Set();
+const staffOf=r=>r.staff||(r.employeeId?[{id:r.employeeId,name:r.employeeName,commission:r.commission||0,label:r.ruleLabel||''}]:[]);
+const staffNames=r=>staffOf(r).map(x=>x.name).join(', ');
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',maximumFractionDigits:2});
+const fm=n=>money.format(Number(n)||0);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const pad=n=>String(n).padStart(2,'0');
+const now=new Date();
+const today=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+let month=today.slice(0,7);
+const trDate=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return`${dd}.${m}.${y}`};
+const monthName=m=>{const[y,mm]=m.split('-');return new Date(+y,+mm-1,1).toLocaleDateString('tr-TR',{month:'long',year:'numeric'})};
+const byName=(a,b)=>(a.name||'').localeCompare(b.name||'','tr');
+const byOrder=(a,b)=>((a.order??999)-(b.order??999))||byName(a,b);
+const fullName=c=>`${c.firstName||''} ${c.lastName||''}`.trim();
+const cusLabel=c=>`${fullName(c)} — ${c.phone||'tel yok'}`;
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
+function setStatus(kind,text){$('#dot').className='dot '+(kind||'');$('#statusText').textContent=text}
+
+/* ---------- firebase ---------- */
+const app=initializeApp(firebaseConfig), auth=getAuth(app), fs=getFirestore(app);
+let unsubs=[];
+async function put(col,obj){
+  const {id,...data}=obj;
+  try{await setDoc(doc(fs,col,id),data)}
+  catch(e){toast(e&&e.code==='permission-denied'?'Bu hesabın kayıt yetkisi yok':'Kaydedilemedi, bağlantını kontrol et');throw e}
+}
+async function del(col,id){
+  try{await deleteDoc(doc(fs,col,id))}
+  catch(e){toast('Silinemedi, bağlantını kontrol et');throw e}
+}
+function snapList(s){return s.docs.map(d=>Object.assign({id:d.id},d.data()))}
+function subRecords(){
+  if(mode!=='db')return;
+  if(unsubRec)unsubRec();
+  unsubRec=onSnapshot(query(collection(fs,'records'),where('month','==',month)),s=>{S.records=snapList(s);render()},onErr);
+}
+function onErr(e){clearTimeout(loadTimer);setStatus('warn',e&&e.code==='permission-denied'?'Bu hesabın yetkisi yok':'Veriye ulaşılamıyor');}
+async function seedIfEmpty(){
+  try{
+    const m=await getDoc(doc(fs,'meta','seed'));
+    if(m.exists())return;
+    const b=writeBatch(fs);
+    SEED_SERVICES.forEach(x=>{const {id,...d}=x;b.set(doc(fs,'services',id),d)});
+    SEED_EMPLOYEES.forEach(x=>{const {id,...d}=x;b.set(doc(fs,'employees',id),d)});
+    b.set(doc(fs,'meta','seed'),{at:new Date().toISOString()});
+    await b.commit();
+  }catch(e){console.error('Başlangıç verisi yazılamadı',e)}
+}
+function startData(){
+  mode='db';setStatus('','Bağlanıyor…');
+  loadTimer=setTimeout(()=>setStatus('warn','Veri henüz gelmedi, bağlantını kontrol et'),10000);
+  ['employees','services','customers'].forEach(c=>{
+    unsubs.push(onSnapshot(collection(fs,c),s=>{
+      S[c]=snapList(s);
+      if(!s.metadata.fromCache){clearTimeout(loadTimer);setStatus('ok','Bulutta kayıtlı')}
+      render();
+    },onErr));
+  });
+  subRecords();
+  seedIfEmpty();
+}
+function stopData(){
+  unsubs.forEach(u=>u());unsubs=[];
+  if(unsubRec)unsubRec();unsubRec=null;mode='loading';
+  S.employees=[];S.services=[];S.customers=[];S.records=[];selCus=null;rCusId=null;
+}
+async function init(){
+  $('#month').value=month;$('#rDate').value=today;
+  render();
+  onAuthStateChanged(auth,u=>{
+    $('#boot').hidden=true;
+    if(u){$('#login').hidden=true;startData()}
+    else{stopData();render();$('#login').hidden=false;$('#lEmail').focus()}
+  });
+  $('#loginForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();$('#lErr').textContent='';
+    try{await signInWithEmailAndPassword(auth,$('#lEmail').value.trim(),$('#lPass').value)}
+    catch(e){
+      const c=e&&e.code;
+      $('#lErr').textContent=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(c)?'E-posta veya şifre hatalı.'
+        :c==='auth/too-many-requests'?'Çok fazla deneme yapıldı, birkaç dakika sonra tekrar dene.':'Giriş yapılamadı, bağlantını kontrol et.';
+    }
+  });
+  $('#logout').onclick=()=>signOut(auth);
+}
+
+/* ---------- prim ---------- */
+function calcPrim(emp,svcId,price){
+  const r=emp&&emp.rates&&emp.rates[svcId];
+  if(!r||!r.on)return{amount:0,label:'Prim yok'};
+  const v=Number(r.value)||0;
+  if(r.type==='fix')return{amount:v,label:fm(v)+' sabit'};
+  return{amount:Math.round(price*v)/100,label:'%'+v};
+}
+function ruleChip(r){return r.type==='fix'?fm(r.value):'%'+(r.value||0)}
+
+/* ---------- render ---------- */
+function render(){
+  const emps=S.employees.slice().sort(byOrder), svcs=S.services.slice().sort(byOrder);
+  const cus=S.customers.slice().sort((a,b)=>fullName(a).localeCompare(fullName(b),'tr'));
+  $('#nEmp').textContent=emps.length||'';$('#nSvc').textContent=svcs.length||'';$('#nCus').textContent=cus.length||'';
+
+  // form selects (preserve selection)
+  const keep=(sel,html)=>{const el=$(sel);const v=el.value;el.innerHTML=html;if([...el.options].some(o=>o.value===v))el.value=v};
+  keep('#rSvc','<option value="">Seç…</option>'+svcs.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(''));
+  toggleCustom();renderCusInfo();
+  renderStaff();
+
+  // records
+  const recs=S.records.filter(r=>r.month===month).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+  $('#sumTitle').textContent=monthName(month)+' prim özeti';
+  if(!recs.length){
+    $('#recBody').innerHTML=`<tr><td colspan="7"><div class="empty"><strong>${esc(monthName(month))} için kayıt yok</strong>Soldaki formdan ilk işlemi gir; prim otomatik hesaplanır.</div></td></tr>`;
+  }else{
+    $('#recBody').innerHTML=recs.map(r=>`<tr>
+      <td class="mono">${trDate(r.date)}</td><td>${staffOf(r).map(x=>`<div>${esc(x.name)} <span class="muted mono" style="font-size:12px">${fm(x.commission)}</span></div>`).join('')}</td><td>${esc(r.serviceName)}</td>
+      <td>${r.customerId?`<button class="btn ghost sm" data-act="cus-open" data-id="${esc(r.customerId)}">${esc(r.customerName)}</button>`:esc(r.customerName||'—')}</td>
+      <td class="num">${fm(r.price)}</td><td class="num" style="color:var(--accent)">${fm(r.commission)}</td>
+      <td><button class="btn ghost sm danger" data-act="rec-del" data-id="${esc(r.id)}">Sil</button></td></tr>`).join('');
+  }
+  const agg={};recs.forEach(r=>staffOf(r).forEach(x=>{const a=agg[x.id]||(agg[x.id]={name:x.name,n:0,ciro:0,prim:0});a.n++;a.ciro+=+r.price||0;a.prim+=+x.commission||0}));
+  const rows=Object.values(agg).sort((a,b)=>b.prim-a.prim);
+  const totals={n:recs.length,ciro:recs.reduce((s,r)=>s+(+r.price||0),0),prim:recs.reduce((s,r)=>s+(+r.commission||0),0)};
+  if(!rows.length){$('#sumBody').innerHTML='<tr><td colspan="4" class="muted">Bu ay henüz prim yok.</td></tr>';$('#sumFoot').innerHTML=''}
+  else{
+    $('#sumBody').innerHTML=rows.map(a=>`<tr><td>${esc(a.name)}</td><td class="num">${a.n}</td><td class="num">${fm(a.ciro)}</td><td class="num prim">${fm(a.prim)}</td></tr>`).join('');
+    const t=totals;
+    $('#sumFoot').innerHTML=`<tr><td>Toplam</td><td class="num">${t.n}</td><td class="num">${fm(t.ciro)}</td><td class="num prim" style="color:var(--accent)">${fm(t.prim)}</td></tr>`;
+  }
+
+  // employees
+  $('#empList').innerHTML=emps.length?emps.map(e=>{
+    const rules=svcs.filter(s=>e.rates&&e.rates[s.id]&&e.rates[s.id].on);
+    return `<div class="card"><div style="min-width:0;flex:1">
+      <div class="who">${esc(e.name)} ${e.active===false?'<span class="chip">Pasif</span>':''}</div>
+      <div class="muted" style="font-size:13px">${esc(e.phone||'')}</div>
+      <div class="rules">${rules.length?rules.map(s=>`<span class="chip on">${esc(s.name)} · ${ruleChip(e.rates[s.id])}</span>`).join(''):'<span class="chip">Hiçbir işlemden prim almıyor</span>'}</div>
+    </div><div class="acts"><button class="btn sm" data-act="emp-edit" data-id="${esc(e.id)}">Düzenle</button><button class="btn ghost sm danger" data-act="emp-del" data-id="${esc(e.id)}">Sil</button></div></div>`}).join('')
+    :`<div class="panel empty"><strong>Henüz çalışan yok</strong>“Çalışan ekle” ile başla; prim oranlarını işlem bazında gireceksin.</div>`;
+
+  // services
+  $('#svcBody').innerHTML=svcs.length?svcs.map(s=>{
+    const who=emps.filter(e=>e.rates&&e.rates[s.id]&&e.rates[s.id].on);
+    return `<tr><td><strong>${esc(s.name)}</strong></td><td class="num">${fm(s.price)}</td>
+      <td>${who.length?who.map(e=>`<span class="chip on">${esc(e.name)} ${ruleChip(e.rates[s.id])}</span>`).join(' '):'<span class="muted">—</span>'}</td>
+      <td style="white-space:nowrap;text-align:right"><button class="btn sm" data-act="svc-edit" data-id="${esc(s.id)}">Düzenle</button> <button class="btn ghost sm danger" data-act="svc-del" data-id="${esc(s.id)}">Sil</button></td></tr>`}).join('')
+    :`<tr><td colspan="4"><div class="empty"><strong>Henüz işlem yok</strong>Kesim, fön, boya gibi hizmetleri ve ücretlerini ekle.</div></td></tr>`;
+
+  renderCustomers(cus);
+}
+
+function renderCustomers(cus){
+  const q=($('#cusSearch').value||'').toLocaleLowerCase('tr').trim();
+  const list=cus.filter(c=>!q||(fullName(c)+' '+(c.phone||'')).toLocaleLowerCase('tr').includes(q));
+  $('#cusList2').innerHTML=list.length?list.map(c=>`<button class="row" data-act="cus-open" data-id="${esc(c.id)}" aria-current="${c.id===selCus}">
+      <span><strong>${esc(fullName(c))}</strong><br><span class="muted" style="font-size:13px">${esc(c.phone||'Telefon yok')}</span></span>
+      ${c.colorCode?`<span class="swatch">${esc(c.colorCode.split('\n')[0].slice(0,22))}</span>`:''}</button>`).join('')
+    :`<div class="empty">${cus.length?'Aramaya uyan müşteri yok.':'<strong>Henüz müşteri yok</strong>“Müşteri ekle” ile ilk kaydı oluştur.'}</div>`;
+  const c=S.customers.find(x=>x.id===selCus);
+  if(!c){$('#cusDetail').innerHTML='<div class="empty"><strong>Müşteri seç</strong>Boya numarasını, notlarını ve geçmiş işlemlerini görmek için listeden birini seç.</div>';return}
+  const notes=(c.notes||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||''));
+  $('#cusDetail').innerHTML=`<div class="stack">
+    <div class="sechead" style="margin:0"><div><h2>${esc(fullName(c))}</h2><div class="muted">${esc(c.phone||'Telefon yok')}</div></div>
+      <div class="acts" style="display:flex;gap:6px"><button class="btn sm" data-act="cus-edit" data-id="${esc(c.id)}">Düzenle</button><button class="btn ghost sm danger" data-act="cus-del" data-id="${esc(c.id)}">Sil</button></div></div>
+    <div class="subtabs" role="tablist">
+      <button role="tab" data-act="cus-view" data-view="info" aria-selected="${cusView==='info'}">Bilgiler &amp; Boya</button>
+      <button role="tab" data-act="cus-view" data-view="gecmis" aria-selected="${cusView==='gecmis'}">Geçmiş İşlemler</button>
+    </div>
+    ${cusView==='gecmis'?`<div id="history" class="muted" style="font-size:14px">Yükleniyor…</div>`:`
+    <div><h3>Saç boya numarası / formül</h3>
+      ${c.colorCode?`<div class="colorbox"><div class="code">${esc(c.colorCode).replace(/\n/g,'<br>')}</div>${c.colorAt?`<div class="muted" style="font-size:12px;margin-top:6px">Son güncelleme ${trDate(c.colorAt)}</div>`:''}</div>`:'<div class="muted" style="font-size:14px">Henüz boya numarası yazılmadı.</div>'}
+      <div class="row-flex" style="margin-top:10px"><label>Yeni / güncel formül <textarea id="colorIn" rows="2" placeholder="Örn. 7.1 + 8.0 (1:1), 20 vol oksidan, 35 dk">${esc(c.colorCode||'')}</textarea></label>
+      <button class="btn primary" data-act="color-save" data-id="${esc(c.id)}">Kaydet</button></div></div>
+    <div><h3>Notlar</h3>
+      <div class="row-flex"><label>Not ekle <input id="noteIn" placeholder="Örn. hassas saç derisi, alerji testi yapıldı"></label><button class="btn" data-act="note-add" data-id="${esc(c.id)}">Ekle</button></div>
+      <div class="stack" style="margin-top:12px;gap:10px">${notes.length?notes.map(n=>`<div class="note"><time>${trDate((n.at||'').slice(0,10))}</time><div>${esc(n.text)}</div><button class="btn ghost sm danger" data-act="note-del" data-id="${esc(c.id)}" data-note="${esc(n.id)}">Sil</button></div>`).join(''):'<div class="muted" style="font-size:14px">Not yok.</div>'}</div></div>
+    `}
+  </div>`;
+  if(cusView==='gecmis')loadHistory(c.id);
+}
+async function loadHistory(id){
+  let recs=[];
+  try{
+    if(mode==='db'){const s=await getDocs(query(collection(fs,'records'),where('customerId','==',id)));recs=snapList(s)}
+    else recs=S.records.filter(r=>r.customerId===id);
+  }catch(e){const h=$('#history');if(h)h.textContent='Geçmiş okunamadı.';return}
+  if(selCus!==id)return;
+  recs.sort((a,b)=>b.date.localeCompare(a.date));
+  const h=$('#history');if(!h)return;
+  const visits=new Set(recs.map(r=>r.date)).size, total=recs.reduce((s,r)=>s+(+r.price||0),0);
+  h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}</td><td>${esc(staffNames(r))}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
+}
+
+function renderStaff(){
+  const s=$('#rSvc').value, p=+$('#rPrice').value||0;
+  const emps=S.employees.filter(e=>e.active!==false).sort(byOrder);
+  [...rStaff].forEach(id=>{if(!emps.some(e=>e.id===id))rStaff.delete(id)});
+  $('#rStaff').innerHTML=emps.length?emps.map(e=>{
+    const r=s&&e.rates&&e.rates[s];
+    let info='&nbsp;';
+    if(s){if(r&&r.on){info=ruleChip(r);if(p>0)info+=' · '+fm(calcPrim(e,s,p).amount)}else info='prim yok'}
+    return `<button type="button" class="staff" data-act="staff-toggle" data-id="${esc(e.id)}" aria-pressed="${rStaff.has(e.id)}">${esc(e.name)}<small>${esc(info).replace('&amp;nbsp;','&nbsp;')}</small></button>`}).join('')
+    :'<span class="muted" style="font-size:13px">Önce Çalışanlar sekmesinden çalışan ekle.</span>';
+  updPreview();
+}
+function updPreview(){
+  const s=$('#rSvc').value, p=+$('#rPrice').value||0, b=$('#rPreview b');
+  const sel=S.employees.filter(e=>rStaff.has(e.id));
+  if(!s||!sel.length){b.textContent='—';$('#rPreview span').textContent='Prim';return}
+  const parts=sel.map(e=>({e,c:calcPrim(e,s,p)})), tot=parts.reduce((a,x)=>a+x.c.amount,0);
+  b.textContent=tot?fm(tot):'Prim yok';
+  $('#rPreview span').textContent=sel.length>1?'Prim · '+parts.map(x=>`${x.e.name.split(' (')[0]} ${fm(x.c.amount)}`).join(' + '):'Prim';
+}
+
+/* ---------- dialog ---------- */
+let dlgSubmit=null;
+function openDlg(title,body,onOk,okText){
+  $('#dlgTitle').textContent=title;$('#dlgBody').innerHTML=body;$('#dlgOk').textContent=okText||'Kaydet';dlgSubmit=onOk;$('#dlg').showModal();
+  const f=$('#dlgBody').querySelector('input,select');if(f)f.focus();
+}
+$('#dlgCancel').onclick=()=>$('#dlg').close();
+$('#dlgForm').addEventListener('submit',async ev=>{ev.preventDefault();if(!dlgSubmit)return;try{const ok=await dlgSubmit();if(ok!==false)$('#dlg').close()}catch(e){}});
+
+function empDialog(emp){
+  const e=emp||{id:uid(),name:'',phone:'',active:true,rates:{}};
+  const svcs=S.services.slice().sort(byOrder);
+  const rows=svcs.map(s=>{const r=(e.rates||{})[s.id]||{on:false,type:'pct',value:''};
+    return `<tr data-svc="${esc(s.id)}"><td><label style="flex-direction:row;align-items:center;gap:8px;color:var(--fg);font-size:14px"><input type="checkbox" id="on-${esc(s.id)}" ${r.on?'checked':''} style="width:auto">${esc(s.name)}</label></td>
+      <td><select id="ty-${esc(s.id)}"><option value="pct" ${r.type!=='fix'?'selected':''}>%</option><option value="fix" ${r.type==='fix'?'selected':''}>₺</option></select></td>
+      <td><input type="number" id="va-${esc(s.id)}" min="0" step="0.01" value="${esc(r.value)}" placeholder="0"></td></tr>`}).join('');
+  openDlg(emp?'Çalışanı düzenle':'Yeni çalışan',`<div class="form">
+    <label>Ad soyad <input id="eName" required value="${esc(e.name)}"></label>
+    <label>Telefon <input id="ePhone" value="${esc(e.phone||'')}" inputmode="tel"></label>
+    <label class="full" style="flex-direction:row;align-items:center;gap:8px;color:var(--fg)"><input type="checkbox" id="eActive" ${e.active!==false?'checked':''} style="width:auto"> Aktif çalışıyor</label>
+    <div class="full"><h3 style="margin-top:6px">Prim aldığı işlemler</h3>
+    ${svcs.length?`<div class="tablewrap"><table class="rates"><thead><tr><th>İşlem</th><th>Tür</th><th>Oran / tutar</th></tr></thead><tbody>${rows}</tbody></table></div><div class="muted" style="font-size:12px;margin-top:6px">% seçersen işlem ücretinin yüzdesi, ₺ seçersen her işlem için sabit tutar prim yazılır.</div>`:'<div class="muted">Önce İşlemler sekmesinden hizmet ekle.</div>'}</div></div>`,
+  async()=>{
+    const name=$('#eName').value.trim();if(!name){toast('Ad soyad gerekli');return false}
+    const rates={};svcs.forEach(s=>{const on=$('#on-'+s.id).checked,val=$('#va-'+s.id).value;if(on||val)rates[s.id]={on,type:$('#ty-'+s.id).value,value:Number(val)||0}});
+    await put('employees',{id:e.id,name,order:e.order??999,phone:$('#ePhone').value.trim(),active:$('#eActive').checked,rates,createdAt:e.createdAt||new Date().toISOString()});
+    toast('Çalışan kaydedildi');
+  });
+}
+function svcDialog(svc){
+  const s=svc||{id:uid(),name:'',price:''};
+  openDlg(svc?'İşlemi düzenle':'Yeni işlem',`<div class="form">
+    <label>İşlem adı <input id="sName" required value="${esc(s.name)}" placeholder="Örn. Dip boya"></label>
+    <label>Varsayılan ücret (₺) <input id="sPrice" type="number" min="0" step="0.01" value="${esc(s.price)}"></label></div>`,
+  async()=>{const name=$('#sName').value.trim();if(!name){toast('İşlem adı gerekli');return false}
+    await put('services',Object.assign({},s,{name,price:Number($('#sPrice').value)||0,order:s.order??999}));toast('İşlem kaydedildi')});
+}
+function cusDialog(c0,opts){
+  opts=opts||{};
+  const c=c0||{id:uid(),firstName:opts.firstName||'',lastName:opts.lastName||'',phone:'',notes:[],colorCode:''};
+  openDlg(c0?'Müşteriyi düzenle':'Yeni müşteri',`<div class="form">
+    <label>Ad <input id="cFirst" required value="${esc(c.firstName)}"></label>
+    <label>Soyad <input id="cLast" value="${esc(c.lastName)}"></label>
+    <label class="full">Telefon <input id="cPhone" inputmode="tel" value="${esc(c.phone||'')}" placeholder="05xx xxx xx xx"></label></div>`,
+  async()=>{const firstName=$('#cFirst').value.trim();if(!firstName){toast('Ad gerekli');return false}
+    await put('customers',Object.assign({},c,{firstName,lastName:$('#cLast').value.trim(),phone:$('#cPhone').value.trim(),createdAt:c.createdAt||new Date().toISOString()}));
+    if(opts.stay){rCusId=c.id;$('#rCus').value=`${firstName} ${$('#cLast').value.trim()}`.trim();renderCusInfo()}
+    else{selCus=c.id;showTab('musteri')}
+    toast('Müşteri kaydedildi')});
+}
+
+/* ---------- actions ---------- */
+function armed(btn){
+  if(btn.classList.contains('armed'))return true;
+  btn.dataset.txt=btn.textContent;btn.classList.add('armed');btn.textContent='Emin misin?';
+  setTimeout(()=>{btn.classList.remove('armed');btn.textContent=btn.dataset.txt},3000);return false;
+}
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-act]');if(!b)return;
+  const id=b.dataset.id, act=b.dataset.act;
+  const cus=()=>S.customers.find(x=>x.id===id);
+  try{
+  switch(act){
+    case'emp-new':return empDialog();
+    case'emp-edit':return empDialog(S.employees.find(x=>x.id===id));
+    case'emp-del':if(armed(b)){await del('employees',id);toast('Çalışan silindi')}return;
+    case'svc-new':return svcDialog();
+    case'svc-edit':return svcDialog(S.services.find(x=>x.id===id));
+    case'svc-del':if(armed(b)){await del('services',id);toast('İşlem silindi')}return;
+    case'cus-new':return cusDialog();
+    case'cus-edit':return cusDialog(cus());
+    case'cus-del':if(armed(b)){await del('customers',id);selCus=null;render();toast('Müşteri silindi')}return;
+    case'cus-open':selCus=id;cusView=b.dataset.view||cusView;showTab('musteri');render();return;
+    case'cus-view':cusView=b.dataset.view;render();return;
+    case'pick-cus':pickCus(id);return;
+    case'staff-toggle':rStaff.has(id)?rStaff.delete(id):rStaff.add(id);renderStaff();return;
+    case'pick-new':{const p=$('#rCus').value.trim().split(/\s+/);hideDrop();cusDialog(null,{firstName:p.length>1?p.slice(0,-1).join(' '):p[0]||'',lastName:p.length>1?p[p.length-1]:'',stay:true});return}
+    case'pick-clear':rCusId=null;$('#rCus').value='';renderCusInfo();return;
+    case'rec-del':if(armed(b)){await del('records',id);toast('Kayıt silindi')}return;
+    case'color-save':{const c=cus();if(!c)return;await put('customers',Object.assign({},c,{colorCode:$('#colorIn').value.trim(),colorAt:today}));toast('Boya numarası kaydedildi');return}
+    case'note-add':{const c=cus();const t=$('#noteIn').value.trim();if(!c||!t)return;await put('customers',Object.assign({},c,{notes:(c.notes||[]).concat({id:uid(),text:t,at:new Date().toISOString()})}));toast('Not eklendi');return}
+    case'note-del':{const c=cus();if(!c||!armed(b))return;await put('customers',Object.assign({},c,{notes:(c.notes||[]).filter(n=>n.id!==b.dataset.note)}));return}
+  }}catch(e){}
+});
+
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===t));
+  document.querySelectorAll('main > section').forEach(s=>s.hidden=s.id!=='tab-'+t);
+  try{sessionStorage.setItem('salon-tab',t)}catch(e){}
+}
+document.querySelectorAll('.tab').forEach(x=>x.onclick=()=>showTab(x.dataset.tab));
+try{const t=sessionStorage.getItem('salon-tab');if(t)showTab(t)}catch(e){}
+
+$('#month').addEventListener('change',e=>{if(!e.target.value)return;month=e.target.value;subRecords();render()});
+$('#cusSearch').addEventListener('input',()=>renderCustomers(S.customers.slice().sort((a,b)=>fullName(a).localeCompare(fullName(b),'tr'))));
+$('#rSvc').addEventListener('change',()=>{const s=S.services.find(x=>x.id===$('#rSvc').value);if(s)$('#rPrice').value=s.price||'';toggleCustom();renderStaff();if(s&&s.custom)$('#rCustom').focus()});
+
+/* ---------- özel işlem + müşteri seçici ---------- */
+function toggleCustom(){const s=S.services.find(x=>x.id===$('#rSvc').value);$('#rCustomWrap').hidden=!(s&&s.custom)}
+function hideDrop(){$('#cusDrop').hidden=true}
+function showDrop(){
+  const q=$('#rCus').value.toLocaleLowerCase('tr').trim();
+  if(!q){hideDrop();return}
+  const m=S.customers.filter(c=>(fullName(c)+' '+(c.phone||'')).toLocaleLowerCase('tr').includes(q))
+    .sort((a,b)=>fullName(a).localeCompare(fullName(b),'tr')).slice(0,8);
+  $('#cusDrop').innerHTML=m.map(c=>`<button type="button" data-act="pick-cus" data-id="${esc(c.id)}"><span>${esc(fullName(c))}</span><span class="muted">${esc(c.phone||'')}</span></button>`).join('')
+    +`<button type="button" class="add" data-act="pick-new">+ “${esc($('#rCus').value.trim())}” yeni müşteri olarak ekle</button>`;
+  $('#cusDrop').hidden=false;
+}
+function pickCus(id){const c=S.customers.find(x=>x.id===id);if(!c)return;rCusId=id;$('#rCus').value=fullName(c);hideDrop();renderCusInfo()}
+function renderCusInfo(){
+  const box=$('#rCusInfo');const c=rCusId&&S.customers.find(x=>x.id===rCusId);
+  if(!c){box.innerHTML='';return}
+  box.innerHTML=`<div class="cusinfo"><div style="min-width:0"><strong>${esc(fullName(c))}</strong> <span class="muted">${esc(c.phone||'')}</span>
+    ${c.colorCode?`<div class="swatch" style="margin-top:2px">Boya: ${esc(c.colorCode.replace(/\n/g,' · '))}</div>`:''}</div>
+    <div style="display:flex;gap:6px"><button type="button" class="btn sm" data-act="cus-open" data-view="gecmis" data-id="${esc(c.id)}">Geçmiş işlemler</button><button type="button" class="btn ghost sm" data-act="pick-clear">Değiştir</button></div></div>`;
+}
+$('#rCus').addEventListener('input',()=>{if(rCusId){rCusId=null;renderCusInfo()}showDrop()});
+$('#rCus').addEventListener('focus',showDrop);
+$('#rCus').addEventListener('keydown',e=>{if(e.key==='Escape')hideDrop();if(e.key==='ArrowDown'){const f=$('#cusDrop button');if(f){e.preventDefault();f.focus()}}});
+document.addEventListener('click',e=>{if(!e.target.closest('.combo'))hideDrop()});
+$('#rPrice').addEventListener('input',renderStaff);
+
+$('#recForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const s=S.services.find(x=>x.id===$('#rSvc').value);
+  const sel=S.employees.filter(x=>rStaff.has(x.id)).sort(byOrder);
+  if(!s){toast('İşlem seç');return}
+  if(!sel.length){toast('İşlemi yapan kişiyi seç');return}
+  const date=$('#rDate').value||today, price=Number($('#rPrice').value)||0;
+  const cTxt=$('#rCus').value.trim(), c=rCusId&&S.customers.find(x=>x.id===rCusId);
+  let sName=s.name;
+  if(s.custom){sName=$('#rCustom').value.trim();if(!sName){toast('Elle işlem adını yaz');$('#rCustom').focus();return}}
+  const staff=sel.map(e=>{const pr=calcPrim(e,s.id,price);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
+  const total=staff.reduce((a,x)=>a+x.commission,0);
+  const rec={id:uid(),date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:sName,
+    customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(total*100)/100,createdAt:new Date().toISOString()};
+  try{await put('records',rec)}catch(err){return}
+  $('#rCustom').value='';rStaff.clear();renderStaff();
+  if(rec.month!==month){month=rec.month;$('#month').value=month;subRecords()}
+  toast(`Kaydedildi · prim ${fm(total)}`);
+});
+
+init();
+})();
+</script>
+
+</body>
+</html>
