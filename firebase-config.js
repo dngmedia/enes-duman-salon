@@ -1,10 +1,10 @@
-// Firebase Console > Proje ayarları > Genel > "Uygulamalarınız" > Web uygulaması > SDK yapılandırması
-// Aşağıdaki değerleri oradan kopyalayıp yapıştır.
+// Firebase web uygulaması bağlantı bilgileri (enes-duman-salon)
 export const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY",
-  authDomain: "PROJE-ID.firebaseapp.com",
-  projectId: "PROJE-ID",
-  storageBucket: "PROJE-ID.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:xxxxxxxxxxxx"
+  apiKey: "AIzaSyAEtqpqgEKJabOwbGFfK8ZENrzPcUuz1S4",
+  authDomain: "enes-duman-salon.firebaseapp.com",
+  projectId: "enes-duman-salon",
+  storageBucket: "enes-duman-salon.firebasestorage.app",
+  messagingSenderId: "1059430728987",
+  appId: "1:1059430728987:web:d14731685906f438f67fbe",
+  measurementId: "G-K3DZ6K45D1"
 };
