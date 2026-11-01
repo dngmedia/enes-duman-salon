@@ -270,11 +270,11 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
 <div id="toast" hidden></div>
 
 <script type="module">
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js?v=2";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SEED_SERVICES, SEED_EMPLOYEES } from "./seed.js";
+import { SEED_SERVICES, SEED_EMPLOYEES } from "./seed.js?v=2";
 (function(){
 const S={employees:[],services:[],customers:[],records:[]};
 let mode='loading', db=null, unsubRec=null, selCus=null, loadTimer=null, rCusId=null, cusView='info';
@@ -362,7 +362,11 @@ async function init(){
     catch(e){
       const c=e&&e.code;
       $('#lErr').textContent=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(c)?'E-posta veya şifre hatalı.'
-        :c==='auth/too-many-requests'?'Çok fazla deneme yapıldı, birkaç dakika sonra tekrar dene.':'Giriş yapılamadı, bağlantını kontrol et.';
+        :c==='auth/too-many-requests'?'Çok fazla deneme yapıldı, birkaç dakika sonra tekrar dene.'
+        :c==='auth/operation-not-allowed'?'E-posta/Şifre girişi Firebase\'de açık değil (Authentication → Sign-in method).'
+        :(c==='auth/api-key-not-valid.-please-pass-a-valid-api-key.'||c==='auth/invalid-api-key')?'Firebase bağlantı bilgisi geçersiz (firebase-config.js).'
+        :c==='auth/network-request-failed'?'İnternet bağlantısı yok ya da Firebase\'e ulaşılamıyor.'
+        :'Giriş yapılamadı. Hata kodu: '+(c||'bilinmiyor');
     }
   });
   $('#logout').onclick=()=>signOut(auth);
