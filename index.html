@@ -91,7 +91,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);font:600 13px var(--f-body);padding:7px 12px;border-radius:99px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:860px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .tile span{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -238,7 +239,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
           </div></div>
           <label class="full">Boya no / not <span class="muted" style="font-weight:500">· isteğe bağlı, müşterinin notlarına da eklenir</span><textarea id="rNote" rows="2" placeholder="Örn. 7.1 + 8.0 (1:1), 20 vol, 35 dk"></textarea></label>
           <div class="preview full" id="rPreview">
-            <div style="min-width:0">Toplam ücret <b id="tPrice">—</b><div class="muted" id="tBreak" style="font-size:12px"></div></div>
+            <div style="min-width:0">Toplam ücret <b id="tPrice">—</b><div class="muted" id="tBreak" style="font-size:12px"></div><div id="tKdv" style="font-size:12px;color:var(--danger)"></div></div>
             <div style="text-align:right">Toplam prim<br><b id="tPrim">—</b></div>
           </div>
           <button class="btn primary full" type="submit">Kaydet</button>
@@ -313,6 +314,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
       <div class="row-flex" style="margin-top:12px">
         <label>Başlangıç <input type="date" id="rpFrom"></label>
         <label>Bitiş <input type="date" id="rpTo"></label>
+        <label>Kart KDV (%20) <select id="rpKdv"><option value="ustune">Kart tutarının %20'si</option><option value="dahil">KDV fiyata dahil (÷1,20)</option></select></label>
         <label>Göster <select id="rpGroup"><option value="day">Gün gün</option><option value="week" selected>Hafta hafta</option><option value="month">Ay ay</option></select></label>
       </div>
     </div>
@@ -371,6 +373,9 @@ let mode='loading', db=null, unsubRec=null, selCus=null, loadTimer=null, rCusId=
 const staffOf=r=>r.staff||(r.employeeId?[{id:r.employeeId,name:r.employeeName,commission:r.commission||0,label:r.ruleLabel||''}]:[]);
 const PAY_LABEL={nakit:'Nakit',kart:'Kart',olusum:'Oluşum POS',iban:'IBAN'}, PAY_ORDER=['nakit','kart','olusum','iban'];
 let rPay='';
+let KDV={rate:20,mode:'ustune'};
+const kdvOf=(r)=>r.payment!=='kart'?0:(KDV.mode==='dahil'?(+r.price||0)*KDV.rate/(100+KDV.rate):(+r.price||0)*KDV.rate/100);
+const kdvHint=()=>KDV.mode==='dahil'?`KDV dahil · tutar ÷ ${(1+KDV.rate/100).toFixed(2).replace('.',',')}`:`tutarın %${KDV.rate}'si`;
 const staffNames=r=>staffOf(r).map(x=>x.name).join(', ');
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -433,6 +438,7 @@ function startData(){
   });
   subRecords();
   subExpenses();
+  unsubs.push(onSnapshot(doc(fs,'settings','app'),d=>{const v=d.exists()?d.data():{};KDV={rate:+(v.kdvRate??20)||0,mode:v.kdvMode==='dahil'?'dahil':'ustune'};if($('#rpKdv'))$('#rpKdv').value=KDV.mode;updTotals();if(!$('#tab-rapor').hidden)runReport()},()=>{}));
   seedIfEmpty();
   if(!$('#tab-rapor').hidden)rpPreset_(rpPreset);
 }
@@ -647,7 +653,7 @@ document.addEventListener('click',async ev=>{
     case'cus-view':cusView=b.dataset.view;render();return;
     case'pick-cus':pickCus(id);return;
     case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
-    case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));return;
+    case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));updTotals();return;
     case'exp-del':if(armed(b)){await del('expenses',id);toast('Gider silindi')}return;
     case'rp-preset':rpPreset_(b.dataset.p);return;
     case'line-add':lines.push(newLine());renderLines();{const el=document.querySelector(`.line[data-k="${lineSeq}"] select`);if(el)el.focus()}return;
@@ -741,6 +747,7 @@ function updTotals(){
   $('#tPrice').textContent=fm(price);
   $('#tPrim').textContent=fm(prim);
   $('#tBreak').textContent=rows.length?rows.map(x=>`${x.name.split(' (')[0]} ${fm(x.amt)}`).join(' · '):'';
+  const k=kdvOf({payment:rPay,price});$('#tKdv').textContent=k?`Kart KDV %${KDV.rate}: −${fm(k)} · net ${fm(price-k)}`:'';
 }
 $('#lines').addEventListener('change',e=>{
   const t=e.target;if(t.dataset.f!=='svc')return;
@@ -802,18 +809,19 @@ async function runReport(){
   const keyOf=d=>g==='day'?d:g==='week'?mondayOf(d):d.slice(0,7);
   const labelOf=k=>g==='day'?`${trDate(k)} <span class="muted">${dayName(k)}</span>`:g==='week'?`${trDate(k)} – ${trDate(addDays(k,6))}`:esc(monthName(k));
   const per={}, emp={}, pay={}, cat={};let ciro=0,prim=0,gider=0;const visits=new Set();
-  const P=k=>per[k]||(per[k]={ciro:0,prim:0,gider:0,v:new Set()});
+  let kdv=0,kart=0;const P=k=>per[k]||(per[k]={ciro:0,prim:0,gider:0,kdv:0,v:new Set()});
   recs.forEach(r=>{
     const k=keyOf(r.date), p=+r.price||0, c=+r.commission||0, a=P(k);
     a.ciro+=p;a.prim+=c;a.v.add(r.visitId||r.id);
     ciro+=p;prim+=c;visits.add(r.visitId||r.id);
+    const kv=kdvOf(r);a.kdv+=kv;kdv+=kv;if(r.payment==='kart')kart+=p;
     const pm=PAY_LABEL[r.payment]||'Belirtilmemiş';pay[pm]=(pay[pm]||0)+p;
     staffOf(r).forEach(x=>{const e=emp[x.id]||(emp[x.id]={name:x.name,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.id)||{}).order??999});e.n++;e.ciro+=p;e.prim+=+x.commission||0});
   });
   exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;cat[x.category]=(cat[x.category]||0)+v});
   const range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
   if(!recs.length&&!exps.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında gelir ya da gider kaydı yok</strong>Başka bir tarih aralığı seç.</div>`;return}
-  const net=ciro-gider-prim, net0=ciro-gider;
+  const net=ciro-kdv-gider-prim, net0=ciro-kdv-gider;
   const keys=Object.keys(per).sort(), max=Math.max(...keys.map(k=>Math.max(per[k].ciro,per[k].gider)),1);
   const emps=Object.values(emp).sort((a,b)=>a.o-b.o);
   const pays=PAY_ORDER.map(k=>PAY_LABEL[k]).concat('Belirtilmemiş').filter(k=>pay[k]);
@@ -824,12 +832,13 @@ async function runReport(){
     <div class="tile"><span>Gelir (ciro)</span><b>${fm(ciro)}</b><small>${range}</small></div>
     <div class="tile"><span>Gider</span><b>${fm(gider)}</b><small>${exps.length} gider kaydı</small></div>
     <div class="tile"><span>Prim hakedişi</span><b class="acc">${fm(prim)}</b><small>${ciro?('%'+(prim/ciro*100).toFixed(1).replace('.',',')+' cirodan'):'—'}</small></div>
-    <div class="tile net ${sign(net)}"><span>${net<0?'Zarar':'Kâr'}</span><b>${fm(net)}</b><small>gelir − gider − prim · primsiz ${fm(net0)}</small></div>
+    <div class="tile"><span>Kart KDV %${KDV.rate}</span><b class="neg">${fm(kdv)}</b><small>${fm(kart)} kart · ${kdvHint()}</small></div>
+    <div class="tile net ${sign(net)}"><span>${net<0?'Zarar':'Kâr'}</span><b>${fm(net)}</b><small>gelir − KDV − gider − prim · primsiz ${fm(net0)}</small></div>
   </div>
   <div class="grid2 three" style="margin-top:18px">
     <div class="stack">
       <div><h3>Gelir · ödeme şekline göre</h3><div class="tablewrap"><table>
-        <tbody>${pays.length?pays.map(k=>`<tr><td>${esc(k)}</td><td class="num">${fm(pay[k])}</td></tr>`).join(''):'<tr><td class="muted">Gelir yok</td></tr>'}</tbody>
+        <tbody>${pays.length?pays.map(k=>`<tr><td>${esc(k)}${k==='Kart'&&kdv?`<div class="neg" style="font-size:12px">KDV −${fm(kdv)} · net ${fm(kart-kdv)}</div>`:''}</td><td class="num">${fm(pay[k])}</td></tr>`).join(''):'<tr><td class="muted">Gelir yok</td></tr>'}</tbody>
         ${pays.length?`<tfoot><tr><td>Toplam gelir · ${visits.size} geliş, ${recs.length} işlem</td><td class="num">${fm(ciro)}</td></tr></tfoot>`:''}
       </table></div></div>
       <div><h3>Çalışan bazında prim hakedişi</h3><div class="tablewrap"><table class="summary">
@@ -844,17 +853,18 @@ async function runReport(){
     </table></div></div>
   </div>
   <div style="margin-top:18px"><h3>${g==='day'?'Gün gün':g==='week'?'Hafta hafta':'Ay ay'} gelir · gider · kâr</h3><div class="tablewrap"><table>
-    <thead><tr><th>${g==='day'?'Gün':g==='week'?'Hafta':'Ay'}</th><th class="num">Geliş</th><th class="num">Gelir</th><th class="num">Gider</th><th class="num">Prim</th><th class="num">Kâr / Zarar</th></tr></thead>
-    <tbody>${keys.map(k=>{const a=per[k], n=a.ciro-a.gider-a.prim;return`<tr><td style="white-space:nowrap">${labelOf(k)}<div class="bar two"><i style="width:${(a.ciro/max*100).toFixed(1)}%"></i><i class="g" style="width:${(a.gider/max*100).toFixed(1)}%"></i></div></td><td class="num">${a.v.size}</td><td class="num">${fm(a.ciro)}</td><td class="num">${fm(a.gider)}</td><td class="num" style="color:var(--accent)">${fm(a.prim)}</td><td class="num ${sign(n)}">${fm(n)}</td></tr>`}).join('')}</tbody>
-    <tfoot><tr><td>Toplam</td><td class="num">${visits.size}</td><td class="num">${fm(ciro)}</td><td class="num">${fm(gider)}</td><td class="num" style="color:var(--accent)">${fm(prim)}</td><td class="num ${sign(net)}">${fm(net)}</td></tr></tfoot>
-  </table></div><div class="muted" style="font-size:12px;margin-top:6px">Çubuk: üst gelir, alt gider. Kâr = gelir − gider − prim hakedişi. Primleri ayrıca "Maaşlar" gideri olarak girersen iki kez düşülür; o durumda "primsiz" rakama bak.</div></div>`;
+    <thead><tr><th>${g==='day'?'Gün':g==='week'?'Hafta':'Ay'}</th><th class="num">Geliş</th><th class="num">Gelir</th><th class="num">KDV</th><th class="num">Gider</th><th class="num">Prim</th><th class="num">Kâr / Zarar</th></tr></thead>
+    <tbody>${keys.map(k=>{const a=per[k], n=a.ciro-a.kdv-a.gider-a.prim;return`<tr><td style="white-space:nowrap">${labelOf(k)}<div class="bar two"><i style="width:${(a.ciro/max*100).toFixed(1)}%"></i><i class="g" style="width:${(a.gider/max*100).toFixed(1)}%"></i></div></td><td class="num">${a.v.size}</td><td class="num">${fm(a.ciro)}</td><td class="num">${fm(a.kdv)}</td><td class="num">${fm(a.gider)}</td><td class="num" style="color:var(--accent)">${fm(a.prim)}</td><td class="num ${sign(n)}">${fm(n)}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td>Toplam</td><td class="num">${visits.size}</td><td class="num">${fm(ciro)}</td><td class="num">${fm(kdv)}</td><td class="num">${fm(gider)}</td><td class="num" style="color:var(--accent)">${fm(prim)}</td><td class="num ${sign(net)}">${fm(net)}</td></tr></tfoot>
+  </table></div><div class="muted" style="font-size:12px;margin-top:6px">Çubuk: üst gelir, alt gider. Kâr = gelir − kart KDV'si − gider − prim hakedişi. Primleri ayrıca "Maaşlar" gideri olarak girersen iki kez düşülür; o durumda "primsiz" rakama bak.</div></div>`;
 }
 $('#rpFrom').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpTo').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpGroup').addEventListener('change',runReport);
+$('#rpKdv').addEventListener('change',async e=>{KDV.mode=e.target.value;runReport();updTotals();try{await setDoc(doc(fs,'settings','app'),{kdvRate:KDV.rate,kdvMode:KDV.mode})}catch(err){toast('Ayar kaydedilemedi')}});
 
 /* ---------- giderler ---------- */
-const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Diğer Giderler"];
+const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Annem Kredi","Teyze Kredi","Sevil Kredi","Feyza Duman Kredi","Diğer Giderler"];
 let gMonth=month, unsubExp=null;
 S.expenses=[];
 function subExpenses(){

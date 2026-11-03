@@ -34,7 +34,8 @@
 
 ## Sekmeler
 - **İşlem Kayıtları:** adisyon — müşteri (yoksa otomatik oluşur), çok satırlı işlem, her satıra usta/çırak, ödeme şekli (Nakit / Kart / Oluşum POS / IBAN), isteğe bağlı boya no / not.
-- **Giderler:** tarih, gider kalemi (26 kalem), tutar, not.
+- **Giderler:** tarih, gider kalemi (30 kalem, krediler dahil), tutar, not.
+- **Kart KDV:** Kart ödemelerinde %20 KDV raporda düşülür; Raporlar sekmesinden "kart tutarının %20'si" ya da "KDV fiyata dahil (÷1,20)" seçilir.
 - **Raporlar:** tarih aralığında gelir, gider, prim hakedişi, kâr/zarar; gün / hafta / ay kırılımı; ödeme şekline ve gider kalemine göre dağılım.
 - **Çalışanlar · İşlemler · Müşteriler:** prim oranları, fiyatlar, boya formülü, notlar, geçmiş işlemler.
 
