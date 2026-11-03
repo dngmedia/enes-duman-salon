@@ -32,6 +32,12 @@
 ### 4. Aç
 `https://dngmedia.github.io/enes-duman-salon/` → yönetici e-postası ve şifresiyle giriş. İlk girişte işlemler ve çalışanlar otomatik yüklenir.
 
+## Sekmeler
+- **İşlem Kayıtları:** adisyon — müşteri (yoksa otomatik oluşur), çok satırlı işlem, her satıra usta/çırak, ödeme şekli (Nakit / Kart / Oluşum POS / IBAN), isteğe bağlı boya no / not.
+- **Giderler:** tarih, gider kalemi (26 kalem), tutar, not.
+- **Raporlar:** tarih aralığında gelir, gider, prim hakedişi, kâr/zarar; gün / hafta / ay kırılımı; ödeme şekline ve gider kalemine göre dağılım.
+- **Çalışanlar · İşlemler · Müşteriler:** prim oranları, fiyatlar, boya formülü, notlar, geçmiş işlemler.
+
 ## Prim mantığı
 - Her çalışanın her işlem için ayrı oranı var: **%** (ücretin yüzdesi) veya **₺** (sabit tutar).
 - Bir işleme birden fazla kişi seçilebilir, her biri kendi oranından prim alır.

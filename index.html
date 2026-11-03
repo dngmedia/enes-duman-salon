@@ -82,6 +82,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .btn.sm{font-size:13px;padding:6px 10px}
 
 .preview{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.net b{font-size:clamp(19px,2.8vw,26px)}
+.pos{color:var(--ok)} .neg{color:var(--danger)}
+.tile.net.pos b{color:var(--ok)} .tile.net.neg b{color:var(--danger)}
+.bar.two{display:flex;flex-direction:column;gap:2px;height:auto;background:none}
+.bar.two i{height:4px;background:var(--accent)} .bar.two i.g{background:var(--danger);opacity:.75}
+.paytag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);font:600 13px var(--f-body);padding:7px 12px;border-radius:99px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -193,6 +199,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="kayit" aria-selected="true">İşlem Kayıtları</button>
+      <button class="tab" role="tab" data-tab="gider" aria-selected="false">Giderler</button>
       <button class="tab" role="tab" data-tab="rapor" aria-selected="false">Raporlar</button>
       <button class="tab" role="tab" data-tab="calisan" aria-selected="false">Çalışanlar<span class="n" id="nEmp"></span></button>
       <button class="tab" role="tab" data-tab="islem" aria-selected="false">İşlemler<span class="n" id="nSvc"></span></button>
@@ -223,6 +230,13 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
           </div>
           <div class="full" id="lines"></div>
           <button type="button" class="btn full" data-act="line-add">+ İşlem ekle</button>
+          <div class="full"><div class="lbl">Ödeme şekli</div><div class="seg" id="rPay">
+            <button type="button" data-act="pay" data-p="nakit" aria-pressed="false">Nakit</button>
+            <button type="button" data-act="pay" data-p="kart" aria-pressed="false">Kart</button>
+            <button type="button" data-act="pay" data-p="olusum" aria-pressed="false">Oluşum POS</button>
+            <button type="button" data-act="pay" data-p="iban" aria-pressed="false">IBAN</button>
+          </div></div>
+          <label class="full">Boya no / not <span class="muted" style="font-weight:500">· isteğe bağlı, müşterinin notlarına da eklenir</span><textarea id="rNote" rows="2" placeholder="Örn. 7.1 + 8.0 (1:1), 20 vol, 35 dk"></textarea></label>
           <div class="preview full" id="rPreview">
             <div style="min-width:0">Toplam ücret <b id="tPrice">—</b><div class="muted" id="tBreak" style="font-size:12px"></div></div>
             <div style="text-align:right">Toplam prim<br><b id="tPrim">—</b></div>
@@ -243,15 +257,49 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
     <div style="margin-top:22px">
       <h3>Ayın kayıtları</h3>
       <div class="tablewrap"><table>
-        <thead><tr><th>Tarih</th><th>Çalışan</th><th>İşlem</th><th>Müşteri</th><th class="num">Ücret</th><th class="num">Prim</th><th></th></tr></thead>
+        <thead><tr><th>Tarih</th><th>Çalışan</th><th>İşlem</th><th>Müşteri</th><th>Ödeme</th><th class="num">Ücret</th><th class="num">Prim</th><th></th></tr></thead>
         <tbody id="recBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- GİDERLER -->
+  <section id="tab-gider" hidden>
+    <div class="sechead">
+      <h2>Giderler</h2>
+      <label style="flex-direction:row;align-items:center;gap:8px">Ay <input type="month" id="gMonth" style="width:auto"></label>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Yeni gider</h3>
+        <form id="expForm" class="form" autocomplete="off">
+          <label>Tarih <input type="date" id="gDate" required></label>
+          <label>Tutar (₺) <input type="number" id="gAmount" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
+          <label class="full">Gider kalemi <select id="gCat"></select></label>
+          <label class="full">Not <span class="muted" style="font-weight:500">· isteğe bağlı</span><textarea id="gNote" rows="2" placeholder="Örn. Ekim faturası, 3 kutu oksidan"></textarea></label>
+          <button class="btn primary full" type="submit">Gideri kaydet</button>
+        </form>
+      </div>
+      <div>
+        <h3 id="gTitle">Bu ayın giderleri</h3>
+        <div class="tablewrap"><table>
+          <tbody id="gCats"></tbody>
+          <tfoot><tr><td>Toplam gider</td><td class="num" id="gTotal">—</td></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+    <div style="margin-top:22px">
+      <h3>Ayın gider kayıtları</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Tarih</th><th>Kalem / not</th><th class="num">Tutar</th><th></th></tr></thead>
+        <tbody id="gBody"></tbody>
       </table></div>
     </div>
   </section>
 
   <!-- RAPORLAR -->
   <section id="tab-rapor" hidden>
-    <div class="sechead"><div><h2>Ciro ve prim raporu</h2><div class="muted" style="font-size:13px">Tarih aralığı seç; ciro ve her çalışanın prim hakedişi hesaplanır.</div></div></div>
+    <div class="sechead"><div><h2>Gelir · gider · kâr</h2><div class="muted" style="font-size:13px">Tarih aralığı seç; gelir, gider, prim hakedişi ve kâr/zarar hesaplanır.</div></div></div>
     <div class="panel" style="margin-bottom:18px">
       <div class="seg">
         <button type="button" data-act="rp-preset" data-p="today" aria-pressed="false">Bugün</button>
@@ -321,6 +369,8 @@ import { SEED_SERVICES, SEED_EMPLOYEES } from "./seed.js?v=2";
 const S={employees:[],services:[],customers:[],records:[]};
 let mode='loading', db=null, unsubRec=null, selCus=null, loadTimer=null, rCusId=null, cusView='info';
 const staffOf=r=>r.staff||(r.employeeId?[{id:r.employeeId,name:r.employeeName,commission:r.commission||0,label:r.ruleLabel||''}]:[]);
+const PAY_LABEL={nakit:'Nakit',kart:'Kart',olusum:'Oluşum POS',iban:'IBAN'}, PAY_ORDER=['nakit','kart','olusum','iban'];
+let rPay='';
 const staffNames=r=>staffOf(r).map(x=>x.name).join(', ');
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -382,12 +432,13 @@ function startData(){
     },onErr));
   });
   subRecords();
+  subExpenses();
   seedIfEmpty();
   if(!$('#tab-rapor').hidden)rpPreset_(rpPreset);
 }
 function stopData(){
   unsubs.forEach(u=>u());unsubs=[];
-  if(unsubRec)unsubRec();unsubRec=null;mode='loading';
+  if(unsubRec)unsubRec();unsubRec=null;if(unsubExp)unsubExp();unsubExp=null;S.expenses=[];mode='loading';
   S.employees=[];S.services=[];S.customers=[];S.records=[];selCus=null;rCusId=null;
 }
 async function init(){
@@ -439,12 +490,12 @@ function render(){
   const recs=S.records.filter(r=>r.month===month).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
   $('#sumTitle').textContent=monthName(month)+' prim özeti';
   if(!recs.length){
-    $('#recBody').innerHTML=`<tr><td colspan="7"><div class="empty"><strong>${esc(monthName(month))} için kayıt yok</strong>Soldaki formdan ilk işlemi gir; prim otomatik hesaplanır.</div></td></tr>`;
+    $('#recBody').innerHTML=`<tr><td colspan="8"><div class="empty"><strong>${esc(monthName(month))} için kayıt yok</strong>Soldaki formdan ilk işlemi gir; prim otomatik hesaplanır.</div></td></tr>`;
   }else{
     $('#recBody').innerHTML=recs.map(r=>`<tr>
       <td class="mono">${trDate(r.date)}</td><td>${staffOf(r).map(x=>`<div>${esc(x.name)} <span class="muted mono" style="font-size:12px">${fm(x.commission)}</span></div>`).join('')}</td><td>${esc(r.serviceName)}</td>
       <td>${r.customerId?`<button class="btn ghost sm" data-act="cus-open" data-id="${esc(r.customerId)}">${esc(r.customerName)}</button>`:esc(r.customerName||'—')}</td>
-      <td class="num">${fm(r.price)}</td><td class="num" style="color:var(--accent)">${fm(r.commission)}</td>
+      <td>${r.payment?`<span class="paytag">${esc(PAY_LABEL[r.payment]||r.payment)}</span>`:'<span class="muted">—</span>'}</td><td class="num">${fm(r.price)}</td><td class="num" style="color:var(--accent)">${fm(r.commission)}</td>
       <td><button class="btn ghost sm danger" data-act="rec-del" data-id="${esc(r.id)}">Sil</button></td></tr>`).join('');
   }
   const agg={};recs.forEach(r=>staffOf(r).forEach(x=>{const a=agg[x.id]||(agg[x.id]={name:x.name,n:0,ciro:0,prim:0});a.n++;a.ciro+=+r.price||0;a.prim+=+x.commission||0}));
@@ -517,7 +568,7 @@ async function loadHistory(id){
   recs.sort((a,b)=>b.date.localeCompare(a.date));
   const h=$('#history');if(!h)return;
   const visits=new Set(recs.map(r=>r.date)).size, total=recs.reduce((s,r)=>s+(+r.price||0),0);
-  h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}</td><td>${esc(staffNames(r))}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
+  h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th>Ödeme</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}${r.note&&r.line===1?`<div class="swatch" style="white-space:pre-wrap">${esc(r.note)}</div>`:''}</td><td>${esc(staffNames(r))}</td><td>${esc(PAY_LABEL[r.payment]||'—')}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
 }
 
 /* ---------- dialog ---------- */
@@ -596,6 +647,8 @@ document.addEventListener('click',async ev=>{
     case'cus-view':cusView=b.dataset.view;render();return;
     case'pick-cus':pickCus(id);return;
     case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
+    case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));return;
+    case'exp-del':if(armed(b)){await del('expenses',id);toast('Gider silindi')}return;
     case'rp-preset':rpPreset_(b.dataset.p);return;
     case'line-add':lines.push(newLine());renderLines();{const el=document.querySelector(`.line[data-k="${lineSeq}"] select`);if(el)el.focus()}return;
     case'line-del':lines=lines.filter(L=>L.k!==+b.dataset.k);if(!lines.length)lines=[newLine()];renderLines();return;
@@ -737,46 +790,105 @@ async function runReport(){
   if(mode!=='db')return;
   const seq=++rpSeq;rpLoaded=true;
   out.innerHTML='<div class="panel empty">Hesaplanıyor…</div>';
-  let recs;
-  try{recs=snapList(await getDocs(query(collection(fs,'records'),where('date','>=',from),where('date','<=',to))))}
-  catch(e){if(seq===rpSeq)out.innerHTML='<div class="panel empty"><strong>Rapor alınamadı</strong>Bağlantını kontrol edip tekrar dene.</div>';return}
+  let recs, exps;
+  try{
+    const [a,b]=await Promise.all([
+      getDocs(query(collection(fs,'records'),where('date','>=',from),where('date','<=',to))),
+      getDocs(query(collection(fs,'expenses'),where('date','>=',from),where('date','<=',to)))]);
+    recs=snapList(a);exps=snapList(b);
+  }catch(e){if(seq===rpSeq)out.innerHTML='<div class="panel empty"><strong>Rapor alınamadı</strong>Bağlantını kontrol edip tekrar dene.</div>';return}
   if(seq!==rpSeq)return;
   const g=$('#rpGroup').value;
   const keyOf=d=>g==='day'?d:g==='week'?mondayOf(d):d.slice(0,7);
   const labelOf=k=>g==='day'?`${trDate(k)} <span class="muted">${dayName(k)}</span>`:g==='week'?`${trDate(k)} – ${trDate(addDays(k,6))}`:esc(monthName(k));
-  const per={}, emp={};let ciro=0,prim=0;const visits=new Set();
+  const per={}, emp={}, pay={}, cat={};let ciro=0,prim=0,gider=0;const visits=new Set();
+  const P=k=>per[k]||(per[k]={ciro:0,prim:0,gider:0,v:new Set()});
   recs.forEach(r=>{
-    const k=keyOf(r.date), p=+r.price||0, c=+r.commission||0;
-    const a=per[k]||(per[k]={n:0,ciro:0,prim:0,v:new Set()});a.n++;a.ciro+=p;a.prim+=c;a.v.add(r.visitId||r.id);
+    const k=keyOf(r.date), p=+r.price||0, c=+r.commission||0, a=P(k);
+    a.ciro+=p;a.prim+=c;a.v.add(r.visitId||r.id);
     ciro+=p;prim+=c;visits.add(r.visitId||r.id);
+    const pm=PAY_LABEL[r.payment]||'Belirtilmemiş';pay[pm]=(pay[pm]||0)+p;
     staffOf(r).forEach(x=>{const e=emp[x.id]||(emp[x.id]={name:x.name,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.id)||{}).order??999});e.n++;e.ciro+=p;e.prim+=+x.commission||0});
   });
+  exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;cat[x.category]=(cat[x.category]||0)+v});
   const range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
-  if(!recs.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında kayıt yok</strong>Başka bir tarih aralığı seç.</div>`;return}
-  const keys=Object.keys(per).sort(), max=Math.max(...keys.map(k=>per[k].ciro),1);
+  if(!recs.length&&!exps.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında gelir ya da gider kaydı yok</strong>Başka bir tarih aralığı seç.</div>`;return}
+  const net=ciro-gider-prim, net0=ciro-gider;
+  const keys=Object.keys(per).sort(), max=Math.max(...keys.map(k=>Math.max(per[k].ciro,per[k].gider)),1);
   const emps=Object.values(emp).sort((a,b)=>a.o-b.o);
+  const pays=PAY_ORDER.map(k=>PAY_LABEL[k]).concat('Belirtilmemiş').filter(k=>pay[k]);
+  const cats=Object.entries(cat).sort((a,b)=>b[1]-a[1]);
+  const sign=v=>v<0?'neg':'pos';
   out.innerHTML=`
   <div class="tiles">
-    <div class="tile"><span>Ciro</span><b>${fm(ciro)}</b><small>${range}</small></div>
-    <div class="tile"><span>Toplam prim hakedişi</span><b class="acc">${fm(prim)}</b><small>${ciro?('%'+(prim/ciro*100).toFixed(1).replace('.',',')+' cirodan'):''}</small></div>
-    <div class="tile"><span>Primler sonrası kalan</span><b>${fm(ciro-prim)}</b><small>ciro − prim</small></div>
-    <div class="tile"><span>İşlem / müşteri gelişi</span><b>${recs.length} / ${visits.size}</b><small>adisyon başı ort. ${fm(ciro/visits.size)}</small></div>
+    <div class="tile"><span>Gelir (ciro)</span><b>${fm(ciro)}</b><small>${range}</small></div>
+    <div class="tile"><span>Gider</span><b>${fm(gider)}</b><small>${exps.length} gider kaydı</small></div>
+    <div class="tile"><span>Prim hakedişi</span><b class="acc">${fm(prim)}</b><small>${ciro?('%'+(prim/ciro*100).toFixed(1).replace('.',',')+' cirodan'):'—'}</small></div>
+    <div class="tile net ${sign(net)}"><span>${net<0?'Zarar':'Kâr'}</span><b>${fm(net)}</b><small>gelir − gider − prim · primsiz ${fm(net0)}</small></div>
   </div>
-  <div class="grid2" style="margin-top:18px">
-    <div><h3>Çalışan bazında hakediş</h3><div class="tablewrap"><table class="summary">
-      <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Katıldığı ciro</th><th class="num">Prim</th></tr></thead>
-      <tbody>${emps.map(e=>`<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num">${fm(e.ciro)}</td><td class="num prim">${fm(e.prim)}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num">${fm(ciro)}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td></tr></tfoot>
-    </table></div><div class="muted" style="font-size:12px;margin-top:6px">Bir işleme iki kişi katıldıysa o işlemin ücreti ikisinin satırında da görünür. Toplam ciro tek sayılır.</div></div>
-    <div><h3>${g==='day'?'Gün gün':g==='week'?'Hafta hafta':'Ay ay'}</h3><div class="tablewrap"><table>
-      <thead><tr><th>${g==='day'?'Gün':g==='week'?'Hafta':'Ay'}</th><th class="num">Geliş</th><th class="num">Ciro</th><th class="num">Prim</th></tr></thead>
-      <tbody>${keys.map(k=>{const a=per[k];return`<tr><td style="white-space:nowrap">${labelOf(k)}<div class="bar"><i style="width:${(a.ciro/max*100).toFixed(1)}%"></i></div></td><td class="num">${a.v.size}</td><td class="num">${fm(a.ciro)}</td><td class="num" style="color:var(--accent)">${fm(a.prim)}</td></tr>`}).join('')}</tbody>
+  <div class="grid2 three" style="margin-top:18px">
+    <div class="stack">
+      <div><h3>Gelir · ödeme şekline göre</h3><div class="tablewrap"><table>
+        <tbody>${pays.length?pays.map(k=>`<tr><td>${esc(k)}</td><td class="num">${fm(pay[k])}</td></tr>`).join(''):'<tr><td class="muted">Gelir yok</td></tr>'}</tbody>
+        ${pays.length?`<tfoot><tr><td>Toplam gelir · ${visits.size} geliş, ${recs.length} işlem</td><td class="num">${fm(ciro)}</td></tr></tfoot>`:''}
+      </table></div></div>
+      <div><h3>Çalışan bazında prim hakedişi</h3><div class="tablewrap"><table class="summary">
+        <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Prim</th></tr></thead>
+        <tbody>${emps.length?emps.map(e=>`<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num prim">${fm(e.prim)}</td></tr>`).join(''):'<tr><td colspan="3" class="muted">Prim yok</td></tr>'}</tbody>
+        ${emps.length?`<tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td></tr></tfoot>`:''}
+      </table></div></div>
+    </div>
+    <div><h3>Gider · kalemlere göre</h3><div class="tablewrap"><table>
+      <tbody>${cats.length?cats.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${fm(v)}</td></tr>`).join(''):'<tr><td class="muted">Bu aralıkta gider yok</td></tr>'}</tbody>
+      ${cats.length?`<tfoot><tr><td>Toplam gider</td><td class="num">${fm(gider)}</td></tr></tfoot>`:''}
     </table></div></div>
-  </div>`;
+  </div>
+  <div style="margin-top:18px"><h3>${g==='day'?'Gün gün':g==='week'?'Hafta hafta':'Ay ay'} gelir · gider · kâr</h3><div class="tablewrap"><table>
+    <thead><tr><th>${g==='day'?'Gün':g==='week'?'Hafta':'Ay'}</th><th class="num">Geliş</th><th class="num">Gelir</th><th class="num">Gider</th><th class="num">Prim</th><th class="num">Kâr / Zarar</th></tr></thead>
+    <tbody>${keys.map(k=>{const a=per[k], n=a.ciro-a.gider-a.prim;return`<tr><td style="white-space:nowrap">${labelOf(k)}<div class="bar two"><i style="width:${(a.ciro/max*100).toFixed(1)}%"></i><i class="g" style="width:${(a.gider/max*100).toFixed(1)}%"></i></div></td><td class="num">${a.v.size}</td><td class="num">${fm(a.ciro)}</td><td class="num">${fm(a.gider)}</td><td class="num" style="color:var(--accent)">${fm(a.prim)}</td><td class="num ${sign(n)}">${fm(n)}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td>Toplam</td><td class="num">${visits.size}</td><td class="num">${fm(ciro)}</td><td class="num">${fm(gider)}</td><td class="num" style="color:var(--accent)">${fm(prim)}</td><td class="num ${sign(net)}">${fm(net)}</td></tr></tfoot>
+  </table></div><div class="muted" style="font-size:12px;margin-top:6px">Çubuk: üst gelir, alt gider. Kâr = gelir − gider − prim hakedişi. Primleri ayrıca "Maaşlar" gideri olarak girersen iki kez düşülür; o durumda "primsiz" rakama bak.</div></div>`;
 }
 $('#rpFrom').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpTo').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpGroup').addEventListener('change',runReport);
+
+/* ---------- giderler ---------- */
+const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Diğer Giderler"];
+let gMonth=month, unsubExp=null;
+S.expenses=[];
+function subExpenses(){
+  if(mode!=='db')return;
+  if(unsubExp)unsubExp();
+  unsubExp=onSnapshot(query(collection(fs,'expenses'),where('month','==',gMonth)),s=>{S.expenses=snapList(s);renderExpenses()},onErr);
+}
+function renderExpenses(){
+  const list=S.expenses.filter(x=>x.month===gMonth).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+  const total=list.reduce((s,x)=>s+(+x.amount||0),0);
+  $('#gTitle').textContent=monthName(gMonth)+' giderleri';
+  $('#gTotal').textContent=fm(total);
+  $('#gBody').innerHTML=list.length?list.map(x=>`<tr>
+    <td class="mono">${trDate(x.date)}</td><td><strong>${esc(x.category)}</strong>${x.note?`<div class="muted" style="font-size:13px;white-space:pre-wrap">${esc(x.note)}</div>`:''}</td>
+    <td class="num">${fm(x.amount)}</td><td><button class="btn ghost sm danger" data-act="exp-del" data-id="${esc(x.id)}">Sil</button></td></tr>`).join('')
+    :`<tr><td colspan="4"><div class="empty"><strong>${esc(monthName(gMonth))} için gider yok</strong>Soldaki formdan ilk gideri gir.</div></td></tr>`;
+  const by={};list.forEach(x=>{by[x.category]=(by[x.category]||0)+(+x.amount||0)});
+  const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  $('#gCats').innerHTML=rows.length?rows.map(([k,v])=>`<tr><td>${esc(k)}<div class="bar"><i style="width:${(v/rows[0][1]*100).toFixed(1)}%"></i></div></td><td class="num">${fm(v)}</td></tr>`).join('')
+    :'<tr><td colspan="2" class="muted">Bu ay gider yok.</td></tr>';
+}
+$('#gCat').innerHTML='<option value="">Seç…</option>'+EXP_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+$('#gDate').value=today;$('#gMonth').value=gMonth;
+$('#gMonth').addEventListener('change',e=>{if(!e.target.value)return;gMonth=e.target.value;subExpenses();renderExpenses()});
+$('#expForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const date=$('#gDate').value||today, category=$('#gCat').value, amount=Number($('#gAmount').value)||0, note=$('#gNote').value.trim();
+  if(!category){toast('Gider kalemini seç');$('#gCat').focus();return}
+  if(amount<=0){toast('Tutarı gir');$('#gAmount').focus();return}
+  try{await put('expenses',{id:uid(),date,month:date.slice(0,7),category,amount,note,createdAt:new Date().toISOString()})}catch(e){return}
+  $('#gAmount').value='';$('#gNote').value='';$('#gCat').value='';
+  if(date.slice(0,7)!==gMonth){gMonth=date.slice(0,7);$('#gMonth').value=gMonth;subExpenses()}
+  toast(`Gider kaydedildi · ${fm(amount)}`);
+});
 
 $('#recForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
@@ -791,28 +903,31 @@ $('#recForm').addEventListener('submit',async ev=>{
   const focusLine=(L,msg)=>{toast(msg);const el=document.querySelector(`.line[data-k="${L.k}"]`);if(el)el.scrollIntoView({block:'center'})};
   const use=lines.filter(L=>L.svc||L.staff.size||L.price);
   if(!use.length){toast('En az bir işlem gir');return}
+  const noteTxt=$('#rNote').value.trim();
   for(const [i,L] of use.entries()){
     const s=S.services.find(x=>x.id===L.svc);
     if(!s)return focusLine(L,`${i+1}. işlem: işlem seç`);
     if(s.custom&&!L.custom.trim())return focusLine(L,`${i+1}. işlem: işlem adını yaz`);
     if(!L.staff.size)return focusLine(L,`${i+1}. işlem: yapan kişiyi seç`);
   }
+  if(!rPay){toast('Ödeme şeklini seç: Nakit, Kart, Oluşum POS ya da IBAN');$('#rPay').scrollIntoView({block:'center'});return}
   const visitId=uid(), now=new Date().toISOString();
   const recs=use.map((L,i)=>{
     const s=S.services.find(x=>x.id===L.svc), price=Number(L.price)||0;
     const staff=S.employees.filter(e=>L.staff.has(e.id)).sort(byOrder).map(e=>{const pr=calcPrim(e,s.id,price);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
     const tot=staff.reduce((a,x)=>a+x.commission,0);
     return{id:uid()+i,visitId,line:i+1,date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:s.custom?L.custom.trim():s.name,
-      customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,createdAt:now};
+      customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,payment:rPay,note:i===0?noteTxt:'',createdAt:now};
   });
   try{
     const b=writeBatch(fs);
     recs.forEach(r=>{const {id,...d}=r;b.set(doc(fs,'records',id),d)});
-    if(newCus){const {id,...d}=newCus;b.set(doc(fs,'customers',id),d)}
+    if(c&&noteTxt){const n={id:uid(),text:noteTxt,at:now};const {id,...d}=c;b.set(doc(fs,'customers',c.id),Object.assign({},d,{notes:(c.notes||[]).concat(n)}))}
+    else if(newCus){const {id,...d}=newCus;b.set(doc(fs,'customers',id),d)}
     await b.commit();
   }catch(e){toast(e&&e.code==='permission-denied'?'Bu hesabın kayıt yetkisi yok':'Kaydedilemedi, bağlantını kontrol et');return}
   const prim=recs.reduce((a,r)=>a+r.commission,0);
-  resetLines();rCusId=null;$('#rCus').value='';$('#rPhone').value='';renderCusInfo();
+  resetLines();rCusId=null;$('#rCus').value='';$('#rPhone').value='';$('#rNote').value='';rPay='';document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed','false'));renderCusInfo();
   if(recs[0].month!==month){month=recs[0].month;$('#month').value=month;subRecords()}
   toast(`${recs.length} işlem kaydedildi${newCus?' · yeni müşteri eklendi':''} · prim ${fm(prim)}`);
 });
