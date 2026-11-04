@@ -218,6 +218,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
       <button class="tab" role="tab" data-tab="kayit" aria-selected="true">İşlem Kayıtları</button>
       <button class="tab" role="tab" data-tab="grafik" aria-selected="false">Grafik</button>
       <button class="tab" role="tab" data-tab="gider" aria-selected="false">Giderler</button>
+      <button class="tab" role="tab" data-tab="avans" aria-selected="false">Avanslar</button>
       <button class="tab" role="tab" data-tab="rapor" aria-selected="false">Raporlar</button>
       <button class="tab" role="tab" data-tab="calisan" aria-selected="false">Çalışanlar<span class="n" id="nEmp"></span></button>
       <button class="tab" role="tab" data-tab="islem" aria-selected="false">İşlemler<span class="n" id="nSvc"></span></button>
@@ -316,7 +317,6 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
           <label>Tarih <input type="date" id="gDate" required></label>
           <label>Tutar (₺) <input type="number" id="gAmount" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
           <label class="full">Gider kalemi <select id="gCat"></select></label>
-          <label class="full" id="gEmpWrap" hidden>Avansı alan çalışan <select id="gEmp"></select></label>
           <label class="full">Not <span class="muted" style="font-weight:500">· isteğe bağlı</span><textarea id="gNote" rows="2" placeholder="Örn. Ekim faturası, 3 kutu oksidan"></textarea></label>
           <button class="btn primary full" type="submit">Gideri kaydet</button>
         </form>
@@ -334,6 +334,41 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
       <div class="tablewrap"><table>
         <thead><tr><th>Tarih</th><th>Kalem / not</th><th class="num">Tutar</th><th></th></tr></thead>
         <tbody id="gBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- AVANSLAR -->
+  <section id="tab-avans" hidden>
+    <div class="sechead">
+      <div><h2>Avanslar</h2><div class="muted" style="font-size:13px">Sadece takip içindir; gider, prim ve kâr hesabından düşülmez.</div></div>
+      <label style="flex-direction:row;align-items:center;gap:8px">Ay <input type="month" id="aMonth" style="width:auto"></label>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Yeni avans</h3>
+        <form id="advForm" class="form" autocomplete="off">
+          <label>Tarih <input type="date" id="aDate" required></label>
+          <label>Tutar (₺) <input type="number" id="aAmount" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
+          <label class="full">Avansı alan çalışan <select id="aEmp"><option value="">Seç…</option></select></label>
+          <label class="full">Not <span class="muted" style="font-weight:500">· isteğe bağlı</span><textarea id="aNote" rows="2" placeholder="Örn. Elden verildi"></textarea></label>
+          <button class="btn primary full" type="submit">Avansı kaydet</button>
+        </form>
+      </div>
+      <div>
+        <h3 id="aTitle">Bu ayın avansları</h3>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Çalışan</th><th class="num">Adet</th><th class="num">Toplam</th></tr></thead>
+          <tbody id="aSum"></tbody>
+          <tfoot><tr><td>Toplam</td><td></td><td class="num" id="aTotal">—</td></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+    <div style="margin-top:22px">
+      <div class="sechead" style="margin-bottom:10px"><h3 style="margin:0">Avans kayıtları</h3><label style="flex-direction:row;align-items:center;gap:8px">Çalışan <select id="aFilter" style="width:auto"><option value="">Tüm çalışanlar</option></select></label></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Tarih</th><th>Çalışan / not</th><th class="num">Tutar</th><th></th></tr></thead>
+        <tbody id="aBody"></tbody>
       </table></div>
     </div>
   </section>
@@ -498,6 +533,8 @@ function startData(){
   });
   subRecords();
   subExpenses();
+  subAdvances();
+  migrateAdvances();
   if(!$('#tab-grafik').hidden){setTimeout(()=>{grEmpOptions();grSetPreset(grPreset)},600)}
   unsubs.push(onSnapshot(doc(fs,'settings','app'),d=>{const v=d.exists()?d.data():{};KDV={rate:+(v.kdvRate??20)||0,mode:v.kdvMode==='dahil'?'dahil':'ustune'};if($('#rpKdv'))$('#rpKdv').value=KDV.mode;updTotals();if(!$('#tab-rapor').hidden)runReport()},()=>{}));
   seedIfEmpty();
@@ -506,7 +543,7 @@ function startData(){
 }
 function stopData(){
   unsubs.forEach(u=>u());unsubs=[];
-  if(unsubRec)unsubRec();unsubRec=null;if(unsubExp)unsubExp();unsubExp=null;S.expenses=[];mode='loading';
+  if(unsubRec)unsubRec();unsubRec=null;if(unsubExp)unsubExp();unsubExp=null;S.expenses=[];if(unsubAdv)unsubAdv();unsubAdv=null;S.advances=[];mode='loading';
   S.employees=[];S.services=[];S.customers=[];S.records=[];selCus=null;rCusId=null;
 }
 async function init(){
@@ -597,6 +634,7 @@ function render(){
     :`<tr><td colspan="4"><div class="empty"><strong>Henüz işlem yok</strong>Kesim, fön, boya gibi hizmetleri ve ücretlerini ekle.</div></td></tr>`;
 
   renderCustomers(cus);
+  renderAdvances();
 }
 
 function renderCustomers(cus){
@@ -718,6 +756,7 @@ document.addEventListener('click',async ev=>{
     case'pick-cus':pickCus(id);return;
     case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);$('#chips-'+L.k).innerHTML=chipsHtml(L);updTotals();return}
     case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));updTotals();return;
+    case'adv-del':if(armed(b)){await del('advances',id);toast('Avans silindi')}return;
     case'exp-del':if(armed(b)){await del('expenses',id);toast('Gider silindi')}return;
     case'gr-preset':grSetPreset(b.dataset.p);return;
     case'rp-preset':rpPreset_(b.dataset.p);return;
@@ -884,7 +923,7 @@ async function runReport(){
     const pm=PAY_LABEL[r.payment]||'Belirtilmemiş';pay[pm]=(pay[pm]||0)+p;
     staffOf(r).forEach(x=>{const e=emp[x.id]||(emp[x.id]={name:x.name,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.id)||{}).order??999});e.n++;e.ciro+=p;e.prim+=+x.commission||0});
   });
-  exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;const ck=catKey(x);cat[ck]=(cat[ck]||0)+v;if(x.category==='Avans'&&x.employeeId){const e=emp[x.employeeId]||(emp[x.employeeId]={name:x.employeeName,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.employeeId)||{}).order??999});e.avans=(e.avans||0)+v}});
+  exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;const ck=catKey(x);cat[ck]=(cat[ck]||0)+v});
   const range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
   if(!recs.length&&!exps.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında gelir ya da gider kaydı yok</strong>Başka bir tarih aralığı seç.</div>`;return}
   const net=ciro-kdv-gider-prim, net0=ciro-kdv-gider;
@@ -907,10 +946,10 @@ async function runReport(){
         <tbody>${pays.length?pays.map(k=>`<tr><td>${esc(k)}${k==='Kart'&&kdv?`<div class="neg" style="font-size:12px">KDV −${fm(kdv)} · net ${fm(kart-kdv)}</div>`:''}</td><td class="num">${fm(pay[k])}</td></tr>`).join(''):'<tr><td class="muted">Gelir yok</td></tr>'}</tbody>
         ${pays.length?`<tfoot><tr><td>Toplam gelir · ${visits.size} geliş, ${recs.length} işlem</td><td class="num">${fm(ciro)}</td></tr></tfoot>`:''}
       </table></div></div>
-      <div><h3>Çalışan bazında prim · avans · kalan</h3><div class="tablewrap"><table class="summary">
-        <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Prim</th><th class="num">Avans</th><th class="num">Kalan</th></tr></thead>
-        <tbody>${emps.length?emps.map(e=>{const av=e.avans||0,k=e.prim-av;return `<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num prim">${fm(e.prim)}</td><td class="num">${av?fm(av):'<span class="muted">—</span>'}</td><td class="num ${k<0?'neg':''}"><b>${fm(k)}</b></td></tr>`}).join(''):'<tr><td colspan="5" class="muted">Prim yok</td></tr>'}</tbody>
-        ${emps.length?`<tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td><td class="num">${fm(emps.reduce((a,e)=>a+(e.avans||0),0))}</td><td class="num">${fm(emps.reduce((a,e)=>a+e.prim-(e.avans||0),0))}</td></tr></tfoot>`:''}
+      <div><h3>Çalışan bazında prim hakedişi</h3><div class="tablewrap"><table class="summary">
+        <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Prim</th></tr></thead>
+        <tbody>${emps.length?emps.map(e=>`<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num prim">${fm(e.prim)}</td></tr>`).join(''):'<tr><td colspan="3" class="muted">Prim yok</td></tr>'}</tbody>
+        ${emps.length?`<tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td></tr></tfoot>`:''}
       </table></div></div>
     </div>
     <div><h3>Gider · kalemlere göre</h3><div class="tablewrap"><table>
@@ -1042,8 +1081,8 @@ $('#grMetric').addEventListener('change',drawGrafik);
 $('#rpKdv').addEventListener('change',async e=>{KDV.mode=e.target.value;runReport();updTotals();try{await setDoc(doc(fs,'settings','app'),{kdvRate:KDV.rate,kdvMode:KDV.mode})}catch(err){toast('Ayar kaydedilemedi')}});
 
 /* ---------- giderler ---------- */
-const catKey=x=>x.category==='Avans'?`Avans · ${x.employeeName||'Belirtilmemiş'}`:x.category;
-const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","Avans","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Annem Kredi","Teyze Kredi","Sevil Kredi","Feyza Duman Kredi","Diğer Giderler"];
+const catKey=x=>x.category;
+const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Annem Kredi","Teyze Kredi","Sevil Kredi","Feyza Duman Kredi","Diğer Giderler"];
 let gMonth=month, unsubExp=null;
 S.expenses=[];
 function subExpenses(){
@@ -1067,20 +1106,69 @@ function renderExpenses(){
 }
 $('#gCat').innerHTML='<option value="">Seç…</option>'+EXP_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
 $('#gDate').value=today;$('#gMonth').value=gMonth;
-function gEmpOptions(){const el=$('#gEmp'),v=el.value;el.innerHTML='<option value="">Seç…</option>'+S.employees.slice().sort(byOrder).map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');if([...el.options].some(o=>o.value===v))el.value=v}
-$('#gCat').addEventListener('change',()=>{const av=$('#gCat').value==='Avans';$('#gEmpWrap').hidden=!av;if(av){gEmpOptions();$('#gEmp').focus()}});
 $('#gMonth').addEventListener('change',e=>{if(!e.target.value)return;gMonth=e.target.value;subExpenses();renderExpenses()});
 $('#expForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const date=$('#gDate').value||today, category=$('#gCat').value, amount=Number($('#gAmount').value)||0, note=$('#gNote').value.trim();
   if(!category){toast('Gider kalemini seç');$('#gCat').focus();return}
   if(amount<=0){toast('Tutarı gir');$('#gAmount').focus();return}
-  let empExtra={};
-  if(category==='Avans'){const e=S.employees.find(x=>x.id===$('#gEmp').value);if(!e){toast('Avansı alan çalışanı seç');$('#gEmp').focus();return}empExtra={employeeId:e.id,employeeName:e.name}}
-  try{await put('expenses',Object.assign({id:uid(),date,month:date.slice(0,7),category,amount,note,createdAt:new Date().toISOString()},empExtra))}catch(e){return}
-  $('#gAmount').value='';$('#gNote').value='';$('#gCat').value='';$('#gEmp').value='';$('#gEmpWrap').hidden=true;
+  try{await put('expenses',{id:uid(),date,month:date.slice(0,7),category,amount,note,createdAt:new Date().toISOString()})}catch(e){return}
+  $('#gAmount').value='';$('#gNote').value='';$('#gCat').value='';
   if(date.slice(0,7)!==gMonth){gMonth=date.slice(0,7);$('#gMonth').value=gMonth;subExpenses()}
   toast(`Gider kaydedildi · ${fm(amount)}`);
+});
+
+/* ---------- avanslar (hiçbir hesaptan düşmez, sadece takip) ---------- */
+let aMonth=month, unsubAdv=null;
+S.advances=[];
+function subAdvances(){
+  if(mode!=='db')return;
+  if(unsubAdv)unsubAdv();
+  unsubAdv=onSnapshot(query(collection(fs,'advances'),where('month','==',aMonth)),s=>{S.advances=snapList(s);renderAdvances()},onErr);
+}
+function aEmpOptions(){
+  const opts=S.employees.slice().sort(byOrder).map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+  [['#aEmp','<option value="">Seç…</option>'],['#aFilter','<option value="">Tüm çalışanlar</option>']].forEach(([sel,first])=>{const el=$(sel),v=el.value;el.innerHTML=first+opts;if([...el.options].some(o=>o.value===v))el.value=v});
+}
+function renderAdvances(){
+  if(!$('#aEmp'))return;
+  aEmpOptions();
+  const f=$('#aFilter').value;
+  const all=S.advances.filter(x=>x.month===aMonth);
+  const list=all.filter(x=>!f||x.employeeId===f).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+  $('#aTitle').textContent=monthName(aMonth)+' avansları';
+  const by={};all.forEach(x=>{const k=x.employeeId||x.employeeName;const a=by[k]||(by[k]={name:x.employeeName,n:0,sum:0,o:(S.employees.find(e=>e.id===x.employeeId)||{}).order??999});a.n++;a.sum+=+x.amount||0});
+  const rows=Object.values(by).sort((a,b)=>a.o-b.o), tot=rows.reduce((s,a)=>s+a.sum,0);
+  $('#aSum').innerHTML=rows.length?rows.map(a=>`<tr><td>${esc(a.name)}</td><td class="num">${a.n}</td><td class="num"><b>${fm(a.sum)}</b></td></tr>`).join(''):'<tr><td colspan="3" class="muted">Bu ay avans yok.</td></tr>';
+  $('#aTotal').textContent=fm(tot);
+  $('#aBody').innerHTML=list.length?list.map(x=>`<tr><td class="mono">${trDate(x.date)}</td><td><strong>${esc(x.employeeName)}</strong>${x.note?`<div class="muted" style="font-size:13px;white-space:pre-wrap">${esc(x.note)}</div>`:''}</td><td class="num">${fm(x.amount)}</td><td><button class="btn ghost sm danger" data-act="adv-del" data-id="${esc(x.id)}">Sil</button></td></tr>`).join('')
+    :`<tr><td colspan="4"><div class="empty"><strong>${esc(monthName(aMonth))} için avans kaydı yok</strong>Soldaki formdan avans gir.</div></td></tr>`;
+}
+async function migrateAdvances(){
+  try{
+    const m=await getDoc(doc(fs,'meta','advances-v1'));if(m.exists())return;
+    const old=snapList(await getDocs(query(collection(fs,'expenses'),where('category','==','Avans'))));
+    if(old.length){
+      const b=writeBatch(fs);
+      old.forEach(x=>{b.set(doc(fs,'advances',x.id),{date:x.date,month:x.month,employeeId:x.employeeId||null,employeeName:x.employeeName||'Belirtilmemiş',amount:+x.amount||0,note:x.note||'',createdAt:x.createdAt||new Date().toISOString()});b.delete(doc(fs,'expenses',x.id))});
+      await b.commit();
+    }
+    await setDoc(doc(fs,'meta','advances-v1'),{at:new Date().toISOString(),moved:old.length});
+    if(old.length)toast(`${old.length} avans kaydı Giderler'den Avanslar sekmesine taşındı`);
+  }catch(e){console.error('Avans taşıma yapılamadı',e)}
+}
+$('#aDate').value=today;$('#aMonth').value=aMonth;
+$('#aMonth').addEventListener('change',e=>{if(!e.target.value)return;aMonth=e.target.value;subAdvances();renderAdvances()});
+$('#aFilter').addEventListener('change',renderAdvances);
+$('#advForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const e=S.employees.find(x=>x.id===$('#aEmp').value), date=$('#aDate').value||today, amount=Number($('#aAmount').value)||0, note=$('#aNote').value.trim();
+  if(!e){toast('Avansı alan çalışanı seç');$('#aEmp').focus();return}
+  if(amount<=0){toast('Tutarı gir');$('#aAmount').focus();return}
+  try{await put('advances',{id:uid(),date,month:date.slice(0,7),employeeId:e.id,employeeName:e.name,amount,note,createdAt:new Date().toISOString()})}catch(err){return}
+  $('#aAmount').value='';$('#aNote').value='';
+  if(date.slice(0,7)!==aMonth){aMonth=date.slice(0,7);$('#aMonth').value=aMonth;subAdvances()}
+  toast(`Avans kaydedildi · ${e.name} · ${fm(amount)}`);
 });
 
 $('#recForm').addEventListener('submit',async ev=>{
