@@ -18,6 +18,7 @@ img{max-width:100%}
   --bg:#141016; --surface:#1d1720; --surface-2:#271f2b; --line:#382d3c;
   --fg:#f2eaee; --muted:#a8989f; --accent:#d9a07f; --accent-ink:#22150f;
   --accent-soft:rgba(217,160,127,.14); --danger:#e48383; --ok:#8fcaa5;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c-other:#6b6070;
   --f-display:"Bodoni Moda",Georgia,"Times New Roman",serif;
   --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -27,11 +28,13 @@ img{max-width:100%}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
   --bg:#f6f1f3; --surface:#ffffff; --surface-2:#f1e9ed; --line:#e0d3d9;
   --fg:#231a20; --muted:#74646c; --accent:#a8603c; --accent-ink:#ffffff;
-  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light}}
+  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#6250d6; --c-other:#b3a8ae}}
 :root[data-theme="light"]{
   --bg:#f6f1f3; --surface:#ffffff; --surface-2:#f1e9ed; --line:#e0d3d9;
   --fg:#231a20; --muted:#74646c; --accent:#a8603c; --accent-ink:#ffffff;
-  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light}
+  --accent-soft:rgba(168,96,60,.10); --danger:#b83f3f; --ok:#2f7d50; color-scheme:light;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#6250d6; --c-other:#b3a8ae}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
@@ -88,6 +91,19 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .bar.two{display:flex;flex-direction:column;gap:2px;height:auto;background:none}
 .bar.two i{height:4px;background:var(--accent)} .bar.two i.g{background:var(--danger);opacity:.75}
 .paytag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.donutwrap{position:relative;max-width:380px;width:100%;margin:0 auto}
+.donut{width:100%;height:auto;display:block;overflow:visible}
+.donut .slice{cursor:pointer;stroke:var(--bg);stroke-width:1;transition:opacity .15s}
+.donut .slice.dim{opacity:.28}
+.donut .slice:focus{outline:none;stroke:var(--fg);stroke-width:1.5}
+.dc-big{font:700 24px var(--f-mono);fill:var(--fg);font-variant-numeric:tabular-nums}
+.dc-small{font:600 9.5px var(--f-body);fill:var(--muted);letter-spacing:.02em}
+.tip{margin-top:10px;text-align:center;font-size:13px;color:var(--muted);min-height:40px}
+.tip strong{color:var(--fg)}
+.legend td:first-child{display:flex;align-items:center;gap:8px}
+.legend tr.hl td{background:var(--accent-soft)}
+.sw{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.matrix th{white-space:nowrap} .matrix td.muted{color:var(--line)}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);font:600 13px var(--f-body);padding:7px 12px;border-radius:99px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -200,6 +216,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="kayit" aria-selected="true">İşlem Kayıtları</button>
+      <button class="tab" role="tab" data-tab="grafik" aria-selected="false">Grafik</button>
       <button class="tab" role="tab" data-tab="gider" aria-selected="false">Giderler</button>
       <button class="tab" role="tab" data-tab="rapor" aria-selected="false">Raporlar</button>
       <button class="tab" role="tab" data-tab="calisan" aria-selected="false">Çalışanlar<span class="n" id="nEmp"></span></button>
@@ -262,6 +279,28 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
         <tbody id="recBody"></tbody>
       </table></div>
     </div>
+  </section>
+
+  <!-- GRAFİK -->
+  <section id="tab-grafik" hidden>
+    <div class="sechead"><div><h2>İşlem grafiği</h2><div class="muted" style="font-size:13px">Tarih aralığında hangi işlemden kaç tane yapıldığını gör; çalışan seçersen sadece onun yaptıkları.</div></div></div>
+    <div class="panel" style="margin-bottom:18px">
+      <div class="seg">
+        <button type="button" data-act="gr-preset" data-p="today" aria-pressed="false">Bugün</button>
+        <button type="button" data-act="gr-preset" data-p="week" aria-pressed="false">Bu hafta</button>
+        <button type="button" data-act="gr-preset" data-p="lastweek" aria-pressed="false">Geçen hafta</button>
+        <button type="button" data-act="gr-preset" data-p="month" aria-pressed="true">Bu ay</button>
+        <button type="button" data-act="gr-preset" data-p="lastmonth" aria-pressed="false">Geçen ay</button>
+        <button type="button" data-act="gr-preset" data-p="year" aria-pressed="false">Bu yıl</button>
+      </div>
+      <div class="row-flex" style="margin-top:12px">
+        <label>Başlangıç <input type="date" id="grFrom"></label>
+        <label>Bitiş <input type="date" id="grTo"></label>
+        <label>Çalışan <select id="grEmp"><option value="">Tüm salon</option></select></label>
+        <label>Halka <select id="grMetric"><option value="n">İşlem adedine göre</option><option value="ciro">Ciroya göre</option></select></label>
+      </div>
+    </div>
+    <div id="grOut"><div class="panel empty">Grafik yükleniyor…</div></div>
   </section>
 
   <!-- GİDERLER -->
@@ -438,6 +477,7 @@ function startData(){
   });
   subRecords();
   subExpenses();
+  if(!$('#tab-grafik').hidden){setTimeout(()=>{grEmpOptions();grSetPreset(grPreset)},600)}
   unsubs.push(onSnapshot(doc(fs,'settings','app'),d=>{const v=d.exists()?d.data():{};KDV={rate:+(v.kdvRate??20)||0,mode:v.kdvMode==='dahil'?'dahil':'ustune'};if($('#rpKdv'))$('#rpKdv').value=KDV.mode;updTotals();if(!$('#tab-rapor').hidden)runReport()},()=>{}));
   seedIfEmpty();
   if(!$('#tab-rapor').hidden)rpPreset_(rpPreset);
@@ -655,6 +695,7 @@ document.addEventListener('click',async ev=>{
     case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
     case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));updTotals();return;
     case'exp-del':if(armed(b)){await del('expenses',id);toast('Gider silindi')}return;
+    case'gr-preset':grSetPreset(b.dataset.p);return;
     case'rp-preset':rpPreset_(b.dataset.p);return;
     case'line-add':lines.push(newLine());renderLines();{const el=document.querySelector(`.line[data-k="${lineSeq}"] select`);if(el)el.focus()}return;
     case'line-del':lines=lines.filter(L=>L.k!==+b.dataset.k);if(!lines.length)lines=[newLine()];renderLines();return;
@@ -671,6 +712,7 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===t));
   document.querySelectorAll('main > section').forEach(s=>s.hidden=s.id!=='tab-'+t);
   try{sessionStorage.setItem('salon-tab',t)}catch(e){}
+  if(t==='grafik'&&mode==='db'){grEmpOptions();grSetPreset(grPreset==='custom'?'month':grPreset)}
   if(t==='rapor'&&mode==='db')rpPreset_(rpPreset==='custom'?'month':rpPreset);
 }
 document.querySelectorAll('.tab').forEach(x=>x.onclick=()=>showTab(x.dataset.tab));
@@ -861,6 +903,118 @@ async function runReport(){
 $('#rpFrom').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpTo').addEventListener('change',()=>{rpPreset='custom';document.querySelectorAll('[data-act="rp-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));runReport()});
 $('#rpGroup').addEventListener('change',runReport);
+/* ---------- grafik ---------- */
+let grPreset='month', grSeq=0, grData=null, grSel=null;
+function grSetPreset(p){
+  grPreset=p;
+  document.querySelectorAll('[data-act="gr-preset"]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===p));
+  const[f,t]=rpRange(p);$('#grFrom').value=f;$('#grTo').value=t;loadGrafik();
+}
+function grEmpOptions(){
+  const el=$('#grEmp'), v=el.value;
+  el.innerHTML='<option value="">Tüm salon</option>'+S.employees.slice().sort(byOrder).map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+  if([...el.options].some(o=>o.value===v))el.value=v;
+}
+async function loadGrafik(){
+  const from=$('#grFrom').value,to=$('#grTo').value,out=$('#grOut');
+  if(!from||!to){out.innerHTML='<div class="panel empty">Başlangıç ve bitiş tarihini seç.</div>';return}
+  if(from>to){out.innerHTML='<div class="panel empty">Başlangıç tarihi bitişten sonra olamaz.</div>';return}
+  if(mode!=='db')return;
+  const seq=++grSeq;out.innerHTML='<div class="panel empty">Hesaplanıyor…</div>';
+  try{grData=snapList(await getDocs(query(collection(fs,'records'),where('date','>=',from),where('date','<=',to))))}
+  catch(e){if(seq===grSeq)out.innerHTML='<div class="panel empty"><strong>Grafik alınamadı</strong>Bağlantını kontrol edip tekrar dene.</div>';return}
+  if(seq!==grSeq)return;
+  drawGrafik();
+}
+function arcPath(cx,cy,r0,r1,a0,a1){
+  const p=(r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)], large=a1-a0>Math.PI?1:0;
+  const [x0,y0]=p(r1,a0),[x1,y1]=p(r1,a1),[x2,y2]=p(r0,a1),[x3,y3]=p(r0,a0);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r1} ${r1} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${r0} ${r0} 0 ${large} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
+}
+function drawGrafik(){
+  const out=$('#grOut');if(!grData)return;
+  const empId=$('#grEmp').value, metric=$('#grMetric').value, emp=S.employees.find(e=>e.id===empId);
+  const from=$('#grFrom').value,to=$('#grTo').value, range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
+  const recs=empId?grData.filter(r=>staffOf(r).some(x=>x.id===empId)):grData;
+  const by={};
+  recs.forEach(r=>{
+    const k=r.serviceName||'—', a=by[k]||(by[k]={name:k,n:0,ciro:0,prim:0});
+    a.n++;a.ciro+=+r.price||0;
+    if(empId){const x=staffOf(r).find(y=>y.id===empId);a.prim+=+(x&&x.commission)||0}
+  });
+  const val=a=>metric==='ciro'?a.ciro:a.n;
+  const all=Object.values(by).sort((a,b)=>val(b)-val(a)||b.n-a.n);
+  const total=all.reduce((s,a)=>s+val(a),0), totN=recs.length, totCiro=recs.reduce((s,r)=>s+(+r.price||0),0);
+  const who=emp?emp.name:'Tüm salon';
+  if(!recs.length||!total){out.innerHTML=`<div class="panel empty"><strong>${esc(who)} · ${range} arasında işlem yok</strong>Başka bir tarih aralığı ya da çalışan seç.</div>`;return}
+  const TOP=7, slices=all.slice(0,TOP).map((a,i)=>({...a,c:`var(--c${i+1})`,i}));
+  if(all.length>TOP){const rest=all.slice(TOP);slices.push({name:`Diğer (${rest.length} işlem türü)`,n:rest.reduce((s,a)=>s+a.n,0),ciro:rest.reduce((s,a)=>s+a.ciro,0),prim:rest.reduce((s,a)=>s+a.prim,0),c:'var(--c-other)',i:TOP,other:true})}
+  const colorOf={};slices.forEach(s=>{if(!s.other)colorOf[s.name]=s.c});
+  const fmtV=v=>metric==='ciro'?fm(v):v+' adet';
+  const pct=v=>(v/total*100).toFixed(1).replace('.',',')+'%';
+  let a=0;const gap=slices.length>1?0.025:0;
+  const paths=slices.map(s=>{const sw=val(s)/total*Math.PI*2, a0=a+gap/2, a1=a+sw-gap/2;a+=sw;
+    const d=slices.length===1?arcPath(100,100,58,92,0,Math.PI*2-0.0001):arcPath(100,100,58,92,a0,Math.max(a1,a0+0.004));
+    return `<path d="${d}" fill="${s.c}" data-i="${s.i}" class="slice" tabindex="0" aria-label="${esc(s.name)}: ${esc(fmtV(val(s)))}, ${pct(val(s))}"></path>`}).join('');
+  const centerBig=metric==='ciro'?fm(total):String(totN), centerSmall=metric==='ciro'?'toplam ciro':'toplam işlem';
+  const matrix=!empId?grMatrix():'';
+  out.innerHTML=`
+  <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+    <div class="tile"><span>${esc(who)}</span><b>${totN} işlem</b><small>${range}</small></div>
+    <div class="tile"><span>${emp?'Katıldığı işlemlerin cirosu':'Ciro'}</span><b>${fm(totCiro)}</b><small>${all.length} farklı işlem türü</small></div>
+    ${emp?`<div class="tile"><span>Prim hakedişi</span><b class="acc">${fm(all.reduce((s,x)=>s+x.prim,0))}</b><small>bu aralıkta</small></div>`:''}
+    <div class="tile"><span>En çok yapılan</span><b style="font-family:var(--f-body);font-size:17px">${esc(all.slice().sort((x,y)=>y.n-x.n)[0].name)}</b><small>${all.slice().sort((x,y)=>y.n-x.n)[0].n} adet</small></div>
+  </div>
+  <div class="grid2" style="margin-top:18px;align-items:center">
+    <div class="donutwrap">
+      <svg viewBox="0 0 200 200" class="donut" role="img" aria-label="${esc(who)} işlem dağılımı">${paths}
+        <text x="100" y="98" text-anchor="middle" class="dc-big" id="dcBig">${esc(centerBig)}</text>
+        <text x="100" y="117" text-anchor="middle" class="dc-small" id="dcSmall">${esc(centerSmall)}</text>
+      </svg>
+      <div class="tip" id="grTip">Bir dilimin ya da satırın üstüne gel, detay burada görünür.</div>
+    </div>
+    <div class="tablewrap"><table class="legend">
+      <thead><tr><th>İşlem</th><th class="num">Adet</th><th class="num">%</th><th class="num">Ciro</th>${emp?'<th class="num">Prim</th>':''}</tr></thead>
+      <tbody>${all.map(x=>{const c=colorOf[x.name]||'var(--c-other)', i=slices.findIndex(s=>s.name===x.name);return `<tr data-i="${i<0?TOP:i}"><td><span class="sw" style="background:${c}"></span>${esc(x.name)}</td><td class="num"><b>${x.n}</b></td><td class="num muted">${pct(val(x))}</td><td class="num">${fm(x.ciro)}</td>${emp?`<td class="num" style="color:var(--accent)">${fm(x.prim)}</td>`:''}</tr>`}).join('')}</tbody>
+      <tfoot><tr><td>Toplam</td><td class="num">${totN}</td><td class="num">100%</td><td class="num">${fm(totCiro)}</td>${emp?`<td class="num" style="color:var(--accent)">${fm(all.reduce((s,x)=>s+x.prim,0))}</td>`:''}</tr></tfoot>
+    </table></div>
+  </div>
+  ${matrix}`;
+  const svg=out.querySelector('.donut'), tip=$('#grTip');
+  const show=(i,ev)=>{
+    const s=slices[i];if(!s)return;
+    svg.querySelectorAll('.slice').forEach(p=>p.classList.toggle('dim',+p.dataset.i!==i));
+    out.querySelectorAll('.legend tbody tr').forEach(r=>r.classList.toggle('hl',+r.dataset.i===i));
+    $('#dcBig').textContent=metric==='ciro'?fm(s.ciro):String(s.n);
+    $('#dcSmall').textContent=s.name.length>22?s.name.slice(0,21)+'…':s.name;
+    tip.innerHTML=`<strong>${esc(s.name)}</strong> · ${s.n} adet · ${pct(val(s))}<br>${fm(s.ciro)} ciro${emp?` · ${fm(s.prim)} prim`:''}`;
+  };
+  const hide=()=>{svg.querySelectorAll('.slice').forEach(p=>p.classList.remove('dim'));out.querySelectorAll('.legend tbody tr').forEach(r=>r.classList.remove('hl'));$('#dcBig').textContent=centerBig;$('#dcSmall').textContent=centerSmall;tip.textContent='Bir dilimin ya da satırın üstüne gel, detay burada görünür.'};
+  svg.querySelectorAll('.slice').forEach(p=>{
+    p.addEventListener('pointerenter',()=>show(+p.dataset.i));p.addEventListener('click',()=>show(+p.dataset.i));
+    p.addEventListener('focus',()=>show(+p.dataset.i));
+    p.addEventListener('pointerleave',hide);p.addEventListener('blur',hide);
+  });
+  out.querySelectorAll('.legend tbody tr').forEach(r=>{r.addEventListener('pointerenter',()=>show(+r.dataset.i));r.addEventListener('pointerleave',hide)});
+}
+function grMatrix(){
+  const emps=S.employees.slice().sort(byOrder).filter(e=>grData.some(r=>staffOf(r).some(x=>x.id===e.id)));
+  if(!emps.length)return'';
+  const svcs={};grData.forEach(r=>{const k=r.serviceName||'—';svcs[k]=(svcs[k]||0)+1});
+  const names=Object.keys(svcs).sort((a,b)=>svcs[b]-svcs[a]);
+  const cnt={};grData.forEach(r=>staffOf(r).forEach(x=>{const k=x.id+'|'+(r.serviceName||'—');cnt[k]=(cnt[k]||0)+1}));
+  const tot=e=>grData.filter(r=>staffOf(r).some(x=>x.id===e.id)).length;
+  return `<div style="margin-top:22px"><h3>Çalışan × işlem (adet)</h3><div class="tablewrap"><table class="matrix">
+    <thead><tr><th>İşlem</th>${emps.map(e=>`<th class="num">${esc(e.name.replace(/ \(.*\)$/,''))}</th>`).join('')}<th class="num">Salon</th></tr></thead>
+    <tbody>${names.map(n=>`<tr><td>${esc(n)}</td>${emps.map(e=>{const v=cnt[e.id+'|'+n]||0;return `<td class="num${v?'':' muted'}">${v||'·'}</td>`}).join('')}<td class="num"><b>${svcs[n]}</b></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Toplam</td>${emps.map(e=>`<td class="num">${tot(e)}</td>`).join('')}<td class="num">${grData.length}</td></tr></tfoot>
+  </table></div><div class="muted" style="font-size:12px;margin-top:6px">İki kişinin birlikte yaptığı işlem ikisinin sütununda da sayılır; "Salon" sütununda bir kez sayılır.</div></div>`;
+}
+$('#grFrom').addEventListener('change',()=>{grPreset='custom';document.querySelectorAll('[data-act="gr-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));loadGrafik()});
+$('#grTo').addEventListener('change',()=>{grPreset='custom';document.querySelectorAll('[data-act="gr-preset"]').forEach(b=>b.setAttribute('aria-pressed','false'));loadGrafik()});
+$('#grEmp').addEventListener('change',drawGrafik);
+$('#grMetric').addEventListener('change',drawGrafik);
+
 $('#rpKdv').addEventListener('change',async e=>{KDV.mode=e.target.value;runReport();updTotals();try{await setDoc(doc(fs,'settings','app'),{kdvRate:KDV.rate,kdvMode:KDV.mode})}catch(err){toast('Ayar kaydedilemedi')}});
 
 /* ---------- giderler ---------- */
