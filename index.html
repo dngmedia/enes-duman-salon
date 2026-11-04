@@ -316,6 +316,7 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
           <label>Tarih <input type="date" id="gDate" required></label>
           <label>Tutar (₺) <input type="number" id="gAmount" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
           <label class="full">Gider kalemi <select id="gCat"></select></label>
+          <label class="full" id="gEmpWrap" hidden>Avansı alan çalışan <select id="gEmp"></select></label>
           <label class="full">Not <span class="muted" style="font-weight:500">· isteğe bağlı</span><textarea id="gNote" rows="2" placeholder="Örn. Ekim faturası, 3 kutu oksidan"></textarea></label>
           <button class="btn primary full" type="submit">Gideri kaydet</button>
         </form>
@@ -860,7 +861,7 @@ async function runReport(){
     const pm=PAY_LABEL[r.payment]||'Belirtilmemiş';pay[pm]=(pay[pm]||0)+p;
     staffOf(r).forEach(x=>{const e=emp[x.id]||(emp[x.id]={name:x.name,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.id)||{}).order??999});e.n++;e.ciro+=p;e.prim+=+x.commission||0});
   });
-  exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;cat[x.category]=(cat[x.category]||0)+v});
+  exps.forEach(x=>{const v=+x.amount||0;P(keyOf(x.date)).gider+=v;gider+=v;const ck=catKey(x);cat[ck]=(cat[ck]||0)+v;if(x.category==='Avans'&&x.employeeId){const e=emp[x.employeeId]||(emp[x.employeeId]={name:x.employeeName,n:0,ciro:0,prim:0,o:(S.employees.find(y=>y.id===x.employeeId)||{}).order??999});e.avans=(e.avans||0)+v}});
   const range=from===to?trDate(from):`${trDate(from)} – ${trDate(to)}`;
   if(!recs.length&&!exps.length){out.innerHTML=`<div class="panel empty"><strong>${range} arasında gelir ya da gider kaydı yok</strong>Başka bir tarih aralığı seç.</div>`;return}
   const net=ciro-kdv-gider-prim, net0=ciro-kdv-gider;
@@ -883,10 +884,10 @@ async function runReport(){
         <tbody>${pays.length?pays.map(k=>`<tr><td>${esc(k)}${k==='Kart'&&kdv?`<div class="neg" style="font-size:12px">KDV −${fm(kdv)} · net ${fm(kart-kdv)}</div>`:''}</td><td class="num">${fm(pay[k])}</td></tr>`).join(''):'<tr><td class="muted">Gelir yok</td></tr>'}</tbody>
         ${pays.length?`<tfoot><tr><td>Toplam gelir · ${visits.size} geliş, ${recs.length} işlem</td><td class="num">${fm(ciro)}</td></tr></tfoot>`:''}
       </table></div></div>
-      <div><h3>Çalışan bazında prim hakedişi</h3><div class="tablewrap"><table class="summary">
-        <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Prim</th></tr></thead>
-        <tbody>${emps.length?emps.map(e=>`<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num prim">${fm(e.prim)}</td></tr>`).join(''):'<tr><td colspan="3" class="muted">Prim yok</td></tr>'}</tbody>
-        ${emps.length?`<tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td></tr></tfoot>`:''}
+      <div><h3>Çalışan bazında prim · avans · kalan</h3><div class="tablewrap"><table class="summary">
+        <thead><tr><th>Çalışan</th><th class="num">İşlem</th><th class="num">Prim</th><th class="num">Avans</th><th class="num">Kalan</th></tr></thead>
+        <tbody>${emps.length?emps.map(e=>{const av=e.avans||0,k=e.prim-av;return `<tr><td>${esc(e.name)}</td><td class="num">${e.n}</td><td class="num prim">${fm(e.prim)}</td><td class="num">${av?fm(av):'<span class="muted">—</span>'}</td><td class="num ${k<0?'neg':''}"><b>${fm(k)}</b></td></tr>`}).join(''):'<tr><td colspan="5" class="muted">Prim yok</td></tr>'}</tbody>
+        ${emps.length?`<tfoot><tr><td>Toplam</td><td class="num">${recs.length}</td><td class="num prim" style="color:var(--accent)">${fm(prim)}</td><td class="num">${fm(emps.reduce((a,e)=>a+(e.avans||0),0))}</td><td class="num">${fm(emps.reduce((a,e)=>a+e.prim-(e.avans||0),0))}</td></tr></tfoot>`:''}
       </table></div></div>
     </div>
     <div><h3>Gider · kalemlere göre</h3><div class="tablewrap"><table>
@@ -1018,7 +1019,8 @@ $('#grMetric').addEventListener('change',drawGrafik);
 $('#rpKdv').addEventListener('change',async e=>{KDV.mode=e.target.value;runReport();updTotals();try{await setDoc(doc(fs,'settings','app'),{kdvRate:KDV.rate,kdvMode:KDV.mode})}catch(err){toast('Ayar kaydedilemedi')}});
 
 /* ---------- giderler ---------- */
-const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Annem Kredi","Teyze Kredi","Sevil Kredi","Feyza Duman Kredi","Diğer Giderler"];
+const catKey=x=>x.category==='Avans'?`Avans · ${x.employeeName||'Belirtilmemiş'}`:x.category;
+const EXP_CATS=["Schwarzkopf Gideri","Oluşum Sanal POS Gideri","Mustafa Tunalı Toptancı","Yemek Gideri","Market Gideri","Dükkan Kira","Ev Kira","Dükkan Elektrik","Dükkan Su","Ev Faturalar","Reklam Gideri","Maaşlar","Avans","SGK Gideri","Bağkur Gideri","KDV ve Stopaj","Muhasebeci Ödemesi","Morokon Senet","Rallis Senet","Demirbaş Ödemesi","Tadilat Giderleri","Egehan Okul","Kaynak Saç Alımı","Kaynak Saç Tadilat","Enes Duman Gider","Feyza Duman Gider","Annem Kredi","Teyze Kredi","Sevil Kredi","Feyza Duman Kredi","Diğer Giderler"];
 let gMonth=month, unsubExp=null;
 S.expenses=[];
 function subExpenses(){
@@ -1032,24 +1034,28 @@ function renderExpenses(){
   $('#gTitle').textContent=monthName(gMonth)+' giderleri';
   $('#gTotal').textContent=fm(total);
   $('#gBody').innerHTML=list.length?list.map(x=>`<tr>
-    <td class="mono">${trDate(x.date)}</td><td><strong>${esc(x.category)}</strong>${x.note?`<div class="muted" style="font-size:13px;white-space:pre-wrap">${esc(x.note)}</div>`:''}</td>
+    <td class="mono">${trDate(x.date)}</td><td><strong>${esc(catKey(x))}</strong>${x.note?`<div class="muted" style="font-size:13px;white-space:pre-wrap">${esc(x.note)}</div>`:''}</td>
     <td class="num">${fm(x.amount)}</td><td><button class="btn ghost sm danger" data-act="exp-del" data-id="${esc(x.id)}">Sil</button></td></tr>`).join('')
     :`<tr><td colspan="4"><div class="empty"><strong>${esc(monthName(gMonth))} için gider yok</strong>Soldaki formdan ilk gideri gir.</div></td></tr>`;
-  const by={};list.forEach(x=>{by[x.category]=(by[x.category]||0)+(+x.amount||0)});
+  const by={};list.forEach(x=>{const k=catKey(x);by[k]=(by[k]||0)+(+x.amount||0)});
   const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]);
   $('#gCats').innerHTML=rows.length?rows.map(([k,v])=>`<tr><td>${esc(k)}<div class="bar"><i style="width:${(v/rows[0][1]*100).toFixed(1)}%"></i></div></td><td class="num">${fm(v)}</td></tr>`).join('')
     :'<tr><td colspan="2" class="muted">Bu ay gider yok.</td></tr>';
 }
 $('#gCat').innerHTML='<option value="">Seç…</option>'+EXP_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
 $('#gDate').value=today;$('#gMonth').value=gMonth;
+function gEmpOptions(){const el=$('#gEmp'),v=el.value;el.innerHTML='<option value="">Seç…</option>'+S.employees.slice().sort(byOrder).map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');if([...el.options].some(o=>o.value===v))el.value=v}
+$('#gCat').addEventListener('change',()=>{const av=$('#gCat').value==='Avans';$('#gEmpWrap').hidden=!av;if(av){gEmpOptions();$('#gEmp').focus()}});
 $('#gMonth').addEventListener('change',e=>{if(!e.target.value)return;gMonth=e.target.value;subExpenses();renderExpenses()});
 $('#expForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const date=$('#gDate').value||today, category=$('#gCat').value, amount=Number($('#gAmount').value)||0, note=$('#gNote').value.trim();
   if(!category){toast('Gider kalemini seç');$('#gCat').focus();return}
   if(amount<=0){toast('Tutarı gir');$('#gAmount').focus();return}
-  try{await put('expenses',{id:uid(),date,month:date.slice(0,7),category,amount,note,createdAt:new Date().toISOString()})}catch(e){return}
-  $('#gAmount').value='';$('#gNote').value='';$('#gCat').value='';
+  let empExtra={};
+  if(category==='Avans'){const e=S.employees.find(x=>x.id===$('#gEmp').value);if(!e){toast('Avansı alan çalışanı seç');$('#gEmp').focus();return}empExtra={employeeId:e.id,employeeName:e.name}}
+  try{await put('expenses',Object.assign({id:uid(),date,month:date.slice(0,7),category,amount,note,createdAt:new Date().toISOString()},empExtra))}catch(e){return}
+  $('#gAmount').value='';$('#gNote').value='';$('#gCat').value='';$('#gEmp').value='';$('#gEmpWrap').hidden=true;
   if(date.slice(0,7)!==gMonth){gMonth=date.slice(0,7);$('#gMonth').value=gMonth;subExpenses()}
   toast(`Gider kaydedildi · ${fm(amount)}`);
 });
