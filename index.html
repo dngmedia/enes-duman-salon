@@ -455,6 +455,26 @@ function subRecords(){
   unsubRec=onSnapshot(query(collection(fs,'records'),where('month','==',month)),s=>{S.records=snapList(s);render()},onErr);
 }
 function onErr(e){clearTimeout(loadTimer);setStatus('warn',e&&e.code==='permission-denied'?'Bu hesabın yetkisi yok':'Veriye ulaşılamıyor');}
+async function migrateSplit(){
+  try{
+    const m=await getDoc(doc(fs,'meta','split-v1'));
+    if(m.exists())return;
+    const all=snapList(await getDocs(collection(fs,'records')));
+    const fix=all.filter(r=>!r.split&&Array.isArray(r.staff)&&r.staff.length>1);
+    for(let i=0;i<fix.length;i+=400){
+      const b=writeBatch(fs);
+      fix.slice(i,i+400).forEach(r=>{
+        const n=r.staff.length;
+        const staff=r.staff.map(x=>Object.assign({},x,{commission:Math.round((+x.commission||0)/n*100)/100,label:(x.label||'')+(x.label&&x.label!=='Prim yok'?` · 1/${n} pay`:'')}));
+        const {id,...d}=r;
+        b.set(doc(fs,'records',r.id),Object.assign({},d,{staff,commission:Math.round(staff.reduce((a,x)=>a+x.commission,0)*100)/100,split:true}));
+      });
+      await b.commit();
+    }
+    await setDoc(doc(fs,'meta','split-v1'),{at:new Date().toISOString(),fixed:fix.length});
+    if(fix.length)toast(`${fix.length} eski ortak işlemin primi bölünerek düzeltildi`);
+  }catch(e){console.error('Prim düzeltmesi yapılamadı',e)}
+}
 async function seedIfEmpty(){
   try{
     const m=await getDoc(doc(fs,'meta','seed'));
@@ -481,6 +501,7 @@ function startData(){
   if(!$('#tab-grafik').hidden){setTimeout(()=>{grEmpOptions();grSetPreset(grPreset)},600)}
   unsubs.push(onSnapshot(doc(fs,'settings','app'),d=>{const v=d.exists()?d.data():{};KDV={rate:+(v.kdvRate??20)||0,mode:v.kdvMode==='dahil'?'dahil':'ustune'};if($('#rpKdv'))$('#rpKdv').value=KDV.mode;updTotals();if(!$('#tab-rapor').hidden)runReport()},()=>{}));
   seedIfEmpty();
+  migrateSplit();
   if(!$('#tab-rapor').hidden)rpPreset_(rpPreset);
 }
 function stopData(){
@@ -513,12 +534,14 @@ async function init(){
 }
 
 /* ---------- prim ---------- */
-function calcPrim(emp,svcId,price){
+// n kişi birlikte yaptıysa ücret (ya da sabit prim) n'e bölünür, herkes kendi payından prim alır
+function calcPrim(emp,svcId,price,n){
+  n=Math.max(1,n||1);
   const r=emp&&emp.rates&&emp.rates[svcId];
   if(!r||!r.on)return{amount:0,label:'Prim yok'};
-  const v=Number(r.value)||0;
-  if(r.type==='fix')return{amount:v,label:fm(v)+' sabit'};
-  return{amount:Math.round(price*v)/100,label:'%'+v};
+  const v=Number(r.value)||0, sfx=n>1?` · 1/${n} pay`:'';
+  if(r.type==='fix')return{amount:Math.round(v/n*100)/100,label:fm(v)+' sabit'+sfx};
+  return{amount:Math.round(price/n*v)/100,label:'%'+v+sfx};
 }
 function ruleChip(r){return r.type==='fix'?fm(r.value):'%'+(r.value||0)}
 
@@ -693,7 +716,7 @@ document.addEventListener('click',async ev=>{
     case'cus-open':selCus=id;cusView=b.dataset.view||cusView;showTab('musteri');render();return;
     case'cus-view':cusView=b.dataset.view;render();return;
     case'pick-cus':pickCus(id);return;
-    case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);b.setAttribute('aria-pressed',L.staff.has(id));updTotals();return}
+    case'staff-toggle':{const L=lineByK(b.dataset.k);if(!L)return;L.staff.has(id)?L.staff.delete(id):L.staff.add(id);$('#chips-'+L.k).innerHTML=chipsHtml(L);updTotals();return}
     case'pay':rPay=rPay===b.dataset.p?'':b.dataset.p;document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===rPay));updTotals();return;
     case'exp-del':if(armed(b)){await del('expenses',id);toast('Gider silindi')}return;
     case'gr-preset':grSetPreset(b.dataset.p);return;
@@ -758,7 +781,7 @@ function chipsHtml(L){
   return emps.map(e=>{
     const r=L.svc&&e.rates&&e.rates[L.svc];
     let info='';
-    if(L.svc){if(r&&r.on){info=ruleChip(r);if(p>0)info+=' · '+fm(calcPrim(e,L.svc,p).amount)}else info='prim yok'}
+    if(L.svc){if(r&&r.on){const n=L.staff.size+(L.staff.has(e.id)?0:1);info=ruleChip(r)+(n>1?' · 1/'+n:'');if(p>0)info+=' · '+fm(calcPrim(e,L.svc,p,n).amount)}else info='prim yok'}
     return `<button type="button" class="staff" data-act="staff-toggle" data-k="${L.k}" data-id="${esc(e.id)}" aria-pressed="${L.staff.has(e.id)}">${esc(e.name)}<small>${info?esc(info):'&nbsp;'}</small></button>`}).join('');
 }
 function renderLines(){
@@ -784,13 +807,13 @@ function updTotals(){
   lines.forEach(L=>{
     const p=+L.price||0;price+=p;
     if(!L.svc)return;
-    S.employees.filter(e=>L.staff.has(e.id)).forEach(e=>{const a=calcPrim(e,L.svc,p).amount;per[e.id]=per[e.id]||{name:e.name,amt:0,o:e.order??999};per[e.id].amt+=a});
+    S.employees.filter(e=>L.staff.has(e.id)).forEach(e=>{const a=calcPrim(e,L.svc,p,L.staff.size).amount;per[e.id]=per[e.id]||{name:e.name,amt:0,o:e.order??999};per[e.id].amt+=a});
   });
   const rows=Object.values(per).sort((a,b)=>a.o-b.o), prim=rows.reduce((s,x)=>s+x.amt,0);
   $('#tPrice').textContent=fm(price);
   $('#tPrim').textContent=fm(prim);
   $('#tBreak').textContent=rows.length?rows.map(x=>`${x.name.split(' (')[0]} ${fm(x.amt)}`).join(' · '):'';
-  const k=kdvOf({payment:rPay,price});$('#tKdv').textContent=k?`Kart KDV %${KDV.rate}: −${fm(k)} · net ${fm(price-k)}`:'';
+  const k=kdvOf({payment:rPay,split:true,price});$('#tKdv').textContent=k?`Kart KDV %${KDV.rate}: −${fm(k)} · net ${fm(price-k)}`:'';
 }
 $('#lines').addEventListener('change',e=>{
   const t=e.target;if(t.dataset.f!=='svc')return;
@@ -1084,7 +1107,7 @@ $('#recForm').addEventListener('submit',async ev=>{
   const visitId=uid(), now=new Date().toISOString();
   const recs=use.map((L,i)=>{
     const s=S.services.find(x=>x.id===L.svc), price=Number(L.price)||0;
-    const staff=S.employees.filter(e=>L.staff.has(e.id)).sort(byOrder).map(e=>{const pr=calcPrim(e,s.id,price);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
+    const staff=S.employees.filter(e=>L.staff.has(e.id)).sort(byOrder).map((e,_,arr)=>{const pr=calcPrim(e,s.id,price,arr.length);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
     const tot=staff.reduce((a,x)=>a+x.commission,0);
     return{id:uid()+i,visitId,line:i+1,date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:s.custom?L.custom.trim():s.name,
       customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,payment:rPay,note:i===0?noteTxt:'',createdAt:now};

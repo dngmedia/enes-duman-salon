@@ -41,7 +41,7 @@
 
 ## Prim mantığı
 - Her çalışanın her işlem için ayrı oranı var: **%** (ücretin yüzdesi) veya **₺** (sabit tutar).
-- Bir işleme birden fazla kişi seçilebilir, her biri kendi oranından prim alır.
+- Bir işleme birden fazla kişi seçilebilir; ücret kişi sayısına bölünür, herkes kendi payından kendi oranıyla prim alır (10.000 ₺ / 2 usta → 5.000 ₺ × %10 = 500 ₺ her birine).
 - Kayıt anındaki oran kayda yazılır; sonradan oran değişse de eski aylar bozulmaz.
 
 Başlangıç oranları: Enes Duman ve Emre Sarıkaya tüm işlemlerden %10 · Çıraklar Nem Bakım ve Keratin-Kolajen-Bakım'dan %10 · Sevil manikür, pedikür, ağda, kirpik, bütün yüz, kaş-dudak üstü ve makyajdan %25.
