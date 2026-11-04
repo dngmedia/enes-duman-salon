@@ -104,6 +104,14 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .legend tr.hl td{background:var(--accent-soft)}
 .sw{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
 .matrix th{white-space:nowrap} .matrix td.muted{color:var(--line)}
+.ctl{display:flex;flex-direction:column;border-left:2px solid var(--line);margin-left:6px}
+.ct{position:relative;display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0 8px 16px}
+.ct::before{content:"";position:absolute;left:-6px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--surface-2);border:2px solid var(--line)}
+.ct.now::before{background:var(--accent);border-color:var(--accent)}
+.ct time{font:500 12px var(--f-mono);color:var(--muted);padding-top:2px}
+.ct .code2{font-family:var(--f-mono);font-size:14px;color:var(--fg);overflow-wrap:anywhere}
+.ct.now .code2{color:var(--accent)}
+@media (max-width:480px){.ct{grid-template-columns:minmax(0,1fr) auto}.ct time{grid-column:1/-1}}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);font:600 13px var(--f-body);padding:7px 12px;border-radius:99px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -255,7 +263,8 @@ dialog::backdrop{background:rgba(10,6,10,.6)}
             <button type="button" data-act="pay" data-p="olusum" aria-pressed="false">Oluşum POS</button>
             <button type="button" data-act="pay" data-p="iban" aria-pressed="false">IBAN</button>
           </div></div>
-          <label class="full">Boya no / not <span class="muted" style="font-weight:500">· isteğe bağlı, müşterinin notlarına da eklenir</span><textarea id="rNote" rows="2" placeholder="Örn. 7.1 + 8.0 (1:1), 20 vol, 35 dk"></textarea></label>
+          <label class="full">Kullanılan boya <span class="muted" style="font-weight:500">· isteğe bağlı, müşterinin boya geçmişine tarihiyle eklenir</span><textarea id="rColor" rows="2" placeholder="Örn. 7.0 + 20 vol, 35 dk"></textarea></label>
+          <label class="full">Not <span class="muted" style="font-weight:500">· isteğe bağlı, müşterinin notlarına eklenir</span><input id="rNote" placeholder="Örn. saç derisi hassas"></label>
           <div class="preview full" id="rPreview">
             <div style="min-width:0">Toplam ücret <b id="tPrice">—</b><div class="muted" id="tBreak" style="font-size:12px"></div><div id="tKdv" style="font-size:12px;color:var(--danger)"></div></div>
             <div style="text-align:right">Toplam prim<br><b id="tPrim">—</b></div>
@@ -451,6 +460,9 @@ let rPay='';
 let KDV={rate:20,mode:'ustune'};
 const kdvOf=(r)=>r.payment!=='kart'?0:(KDV.mode==='dahil'?(+r.price||0)*KDV.rate/(100+KDV.rate):(+r.price||0)*KDV.rate/100);
 const kdvHint=()=>KDV.mode==='dahil'?`KDV dahil · tutar ÷ ${(1+KDV.rate/100).toFixed(2).replace('.',',')}`:`tutarın %${KDV.rate}'si`;
+// Boya geçmişi: her gelişin boyası ayrı satır, eskisi silinmez
+const colorHist=c=>{const h=Array.isArray(c&&c.colorHistory)?c.colorHistory.slice():[];if(!h.length&&c&&c.colorCode)h.push({id:'eski',code:c.colorCode,date:(c.colorAt||'').slice(0,10)});return h.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||'').localeCompare(a.at||''))};
+const addColor=(c,code,date,at)=>{const h=colorHist(c).map(x=>x.id==='eski'?Object.assign({},x,{id:uid()}):x).concat({id:uid(),code,date,at});h.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||'').localeCompare(a.at||''));return{colorHistory:h,colorCode:h[0].code,colorAt:h[0].date}};
 const staffNames=r=>staffOf(r).map(x=>x.name).join(', ');
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -655,10 +667,14 @@ function renderCustomers(cus){
       <button role="tab" data-act="cus-view" data-view="gecmis" aria-selected="${cusView==='gecmis'}">Geçmiş İşlemler</button>
     </div>
     ${cusView==='gecmis'?`<div id="history" class="muted" style="font-size:14px">Yükleniyor…</div>`:`
-    <div><h3>Saç boya numarası / formül</h3>
-      ${c.colorCode?`<div class="colorbox"><div class="code">${esc(c.colorCode).replace(/\n/g,'<br>')}</div>${c.colorAt?`<div class="muted" style="font-size:12px;margin-top:6px">Son güncelleme ${trDate(c.colorAt)}</div>`:''}</div>`:'<div class="muted" style="font-size:14px">Henüz boya numarası yazılmadı.</div>'}
-      <div class="row-flex" style="margin-top:10px"><label>Yeni / güncel formül <textarea id="colorIn" rows="2" placeholder="Örn. 7.1 + 8.0 (1:1), 20 vol oksidan, 35 dk">${esc(c.colorCode||'')}</textarea></label>
-      <button class="btn primary" data-act="color-save" data-id="${esc(c.id)}">Kaydet</button></div></div>
+    <div><h3>Saç boyası</h3>
+      ${(()=>{const h=colorHist(c);return h.length?`<div class="colorbox"><div class="muted" style="font-size:12px">Son kullanılan · ${trDate(h[0].date)}</div><div class="code">${esc(h[0].code).replace(/\n/g,'<br>')}</div></div>`:'<div class="muted" style="font-size:14px">Henüz boya kaydı yok.</div>'})()}
+      <div class="row-flex" style="margin-top:10px">
+        <label style="flex:0 1 160px">Tarih <input type="date" id="colorDate" value="${today}"></label>
+        <label>Yeni boya ekle <textarea id="colorIn" rows="2" placeholder="Örn. 7.0 + 20 vol, 35 dk"></textarea></label>
+        <button class="btn primary" data-act="color-save" data-id="${esc(c.id)}">Ekle</button></div>
+      ${(()=>{const h=colorHist(c);return h.length?`<h3 style="margin-top:16px">Boya geçmişi · ${h.length} kayıt</h3><div class="ctl">${h.map((x,k)=>`<div class="ct${k===0?' now':''}"><time>${trDate(x.date)||'—'}</time><div class="code2">${esc(x.code).replace(/\n/g,'<br>')}</div>${x.id!=='eski'?`<button class="btn ghost sm danger" data-act="color-del" data-id="${esc(c.id)}" data-color="${esc(x.id)}">Sil</button>`:''}</div>`).join('')}</div>`:''})()}
+    </div>
     <div><h3>Notlar</h3>
       <div class="row-flex"><label>Not ekle <input id="noteIn" placeholder="Örn. hassas saç derisi, alerji testi yapıldı"></label><button class="btn" data-act="note-add" data-id="${esc(c.id)}">Ekle</button></div>
       <div class="stack" style="margin-top:12px;gap:10px">${notes.length?notes.map(n=>`<div class="note"><time>${trDate((n.at||'').slice(0,10))}</time><div>${esc(n.text)}</div><button class="btn ghost sm danger" data-act="note-del" data-id="${esc(c.id)}" data-note="${esc(n.id)}">Sil</button></div>`).join(''):'<div class="muted" style="font-size:14px">Not yok.</div>'}</div></div>
@@ -676,7 +692,7 @@ async function loadHistory(id){
   recs.sort((a,b)=>b.date.localeCompare(a.date));
   const h=$('#history');if(!h)return;
   const visits=new Set(recs.map(r=>r.date)).size, total=recs.reduce((s,r)=>s+(+r.price||0),0);
-  h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th>Ödeme</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}${r.note&&r.line===1?`<div class="swatch" style="white-space:pre-wrap">${esc(r.note)}</div>`:''}</td><td>${esc(staffNames(r))}</td><td>${esc(PAY_LABEL[r.payment]||'—')}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
+  h.innerHTML=recs.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;color:var(--fg)"><span><b>${visits}</b> <span class="muted">geliş</span></span><span><b>${recs.length}</b> <span class="muted">işlem</span></span><span><b>${fm(total)}</b> <span class="muted">toplam</span></span><span class="muted">Son geliş ${trDate(recs[0].date)}</span></div><div class="tablewrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Çalışan</th><th>Ödeme</th><th class="num">Ücret</th></tr></thead><tbody>${recs.map(r=>`<tr><td class="mono">${trDate(r.date)}</td><td>${esc(r.serviceName)}${r.color&&r.line===1?`<div class="swatch" style="white-space:pre-wrap">Boya: ${esc(r.color)}</div>`:''}${r.note&&r.line===1?`<div class="muted" style="font-size:12px;white-space:pre-wrap">${esc(r.note)}</div>`:''}</td><td>${esc(staffNames(r))}</td><td>${esc(PAY_LABEL[r.payment]||'—')}</td><td class="num">${fm(r.price)}</td></tr>`).join('')}</tbody></table></div>`:'Bu müşteriye kayıtlı işlem yok.';
 }
 
 /* ---------- dialog ---------- */
@@ -765,7 +781,8 @@ document.addEventListener('click',async ev=>{
     case'pick-new':{const p=$('#rCus').value.trim().split(/\s+/);hideDrop();cusDialog(null,{firstName:p.length>1?p.slice(0,-1).join(' '):p[0]||'',lastName:p.length>1?p[p.length-1]:'',stay:true});return}
     case'pick-clear':rCusId=null;$('#rCus').value='';renderCusInfo();return;
     case'rec-del':if(armed(b)){await del('records',id);toast('Kayıt silindi')}return;
-    case'color-save':{const c=cus();if(!c)return;await put('customers',Object.assign({},c,{colorCode:$('#colorIn').value.trim(),colorAt:today}));toast('Boya numarası kaydedildi');return}
+    case'color-save':{const c=cus();const t=$('#colorIn').value.trim();if(!c)return;if(!t){toast('Boya numarasını yaz');$('#colorIn').focus();return}await put('customers',Object.assign({},c,addColor(c,t,$('#colorDate').value||today,new Date().toISOString())));toast('Boya geçmişe eklendi');return}
+    case'color-del':{const c=cus();if(!c||!armed(b))return;const h=colorHist(c).filter(x=>x.id!==b.dataset.color&&x.id!=='eski');await put('customers',Object.assign({},c,{colorHistory:h,colorCode:h[0]?h[0].code:'',colorAt:h[0]?h[0].date:''}));toast('Boya kaydı silindi');return}
     case'note-add':{const c=cus();const t=$('#noteIn').value.trim();if(!c||!t)return;await put('customers',Object.assign({},c,{notes:(c.notes||[]).concat({id:uid(),text:t,at:new Date().toISOString()})}));toast('Not eklendi');return}
     case'note-del':{const c=cus();if(!c||!armed(b))return;await put('customers',Object.assign({},c,{notes:(c.notes||[]).filter(n=>n.id!==b.dataset.note)}));return}
   }}catch(e){}
@@ -801,7 +818,7 @@ function renderCusInfo(){
   const box=$('#rCusInfo');const c=rCusId&&S.customers.find(x=>x.id===rCusId);
   if(!c){box.innerHTML='';return}
   box.innerHTML=`<div class="cusinfo"><div style="min-width:0"><strong>${esc(fullName(c))}</strong> <span class="muted">${esc(c.phone||'')}</span>
-    ${c.colorCode?`<div class="swatch" style="margin-top:2px">Boya: ${esc(c.colorCode.replace(/\n/g,' · '))}</div>`:''}</div>
+    ${(()=>{const h=colorHist(c);return h.length?`<div class="swatch" style="margin-top:2px">Son boya (${trDate(h[0].date)}): ${esc(h[0].code.replace(/\n/g,' · '))}${h.length>1?` <span class="muted">· önceki: ${esc(h[1].code.replace(/\n/g,' · '))}</span>`:''}</div>`:''})()}</div>
     <div style="display:flex;gap:6px"><button type="button" class="btn sm" data-act="cus-open" data-view="gecmis" data-id="${esc(c.id)}">Geçmiş işlemler</button><button type="button" class="btn ghost sm" data-act="pick-clear">Değiştir</button></div></div>`;
 }
 $('#rCus').addEventListener('input',()=>{if(rCusId)rCusId=null;renderCusInfo();showDrop()});
@@ -1184,7 +1201,7 @@ $('#recForm').addEventListener('submit',async ev=>{
   const focusLine=(L,msg)=>{toast(msg);const el=document.querySelector(`.line[data-k="${L.k}"]`);if(el)el.scrollIntoView({block:'center'})};
   const use=lines.filter(L=>L.svc||L.staff.size||L.price);
   if(!use.length){toast('En az bir işlem gir');return}
-  const noteTxt=$('#rNote').value.trim();
+  const noteTxt=$('#rNote').value.trim(), colorTxt=$('#rColor').value.trim();
   for(const [i,L] of use.entries()){
     const s=S.services.find(x=>x.id===L.svc);
     if(!s)return focusLine(L,`${i+1}. işlem: işlem seç`);
@@ -1198,17 +1215,17 @@ $('#recForm').addEventListener('submit',async ev=>{
     const staff=S.employees.filter(e=>L.staff.has(e.id)).sort(byOrder).map((e,_,arr)=>{const pr=calcPrim(e,s.id,price,arr.length);return{id:e.id,name:e.name,commission:pr.amount,label:pr.label}});
     const tot=staff.reduce((a,x)=>a+x.commission,0);
     return{id:uid()+i,visitId,line:i+1,date,month:date.slice(0,7),staff,staffIds:staff.map(x=>x.id),serviceId:s.id,serviceName:s.custom?L.custom.trim():s.name,
-      customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,payment:rPay,note:i===0?noteTxt:'',createdAt:now};
+      customerId:c?c.id:null,customerName:c?fullName(c):cTxt,price,commission:Math.round(tot*100)/100,payment:rPay,note:i===0?noteTxt:'',color:i===0?colorTxt:'',createdAt:now};
   });
   try{
     const b=writeBatch(fs);
     recs.forEach(r=>{const {id,...d}=r;b.set(doc(fs,'records',id),d)});
-    if(c&&noteTxt){const n={id:uid(),text:noteTxt,at:now};const {id,...d}=c;b.set(doc(fs,'customers',c.id),Object.assign({},d,{notes:(c.notes||[]).concat(n)}))}
+    if(c&&(noteTxt||colorTxt)){const {id,...d}=c;const upd={};if(noteTxt)upd.notes=(c.notes||[]).concat({id:uid(),text:noteTxt,at:now});if(colorTxt)Object.assign(upd,addColor(c,colorTxt,date,now));b.set(doc(fs,'customers',c.id),Object.assign({},d,upd))}
     else if(newCus){const {id,...d}=newCus;b.set(doc(fs,'customers',id),d)}
     await b.commit();
   }catch(e){toast(e&&e.code==='permission-denied'?'Bu hesabın kayıt yetkisi yok':'Kaydedilemedi, bağlantını kontrol et');return}
   const prim=recs.reduce((a,r)=>a+r.commission,0);
-  resetLines();rCusId=null;$('#rCus').value='';$('#rPhone').value='';$('#rNote').value='';rPay='';document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed','false'));renderCusInfo();
+  resetLines();rCusId=null;$('#rCus').value='';$('#rPhone').value='';$('#rNote').value='';$('#rColor').value='';rPay='';document.querySelectorAll('#rPay button').forEach(x=>x.setAttribute('aria-pressed','false'));renderCusInfo();
   if(recs[0].month!==month){month=recs[0].month;$('#month').value=month;subRecords()}
   toast(`${recs.length} işlem kaydedildi${newCus?' · yeni müşteri eklendi':''} · prim ${fm(prim)}`);
 });
